@@ -1,0 +1,205 @@
+﻿<Window x:Class="System_Market.Views.UsuarioWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Gestión de Usuarios"
+        Height="580" Width="920"
+        MinHeight="520" MinWidth="860"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource MaterialDesignPaper}"
+        FontFamily="Segoe UI"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True">
+
+    <Window.Resources>
+        <!-- Paleta local -->
+        <SolidColorBrush x:Key="BrushBtnPrimary" Color="#3F51B5"/>
+        <SolidColorBrush x:Key="BrushBtnAccent"  Color="#0288D1"/>
+        <SolidColorBrush x:Key="BrushBtnDanger"  Color="#EF5350"/>
+        <SolidColorBrush x:Key="BrushBtnNeutral" Color="#607D8B"/>
+    </Window.Resources>
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <!-- Header -->
+            <RowDefinition Height="Auto"/>
+            <!-- Form -->
+            <RowDefinition Height="*"/>
+            <!-- Grid -->
+            <RowDefinition Height="Auto"/>
+            <!-- Actions -->
+        </Grid.RowDefinitions>
+
+        <!-- Encabezado -->
+        <DockPanel Grid.Row="0" Margin="0,0,0,12">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE77B;" FontSize="20"
+                           Foreground="{DynamicResource PrimaryHueMidBrush}" Margin="0,0,6,0"/>
+                <TextBlock Text="Usuarios" FontSize="20" FontWeight="Bold"
+                           Foreground="{DynamicResource MaterialDesignBody}"/>
+            </StackPanel>
+        </DockPanel>
+
+        <!-- Formulario -->
+        <materialDesign:Card Grid.Row="1"
+                             Padding="12" Margin="0,0,0,12"
+                             Background="{DynamicResource MaterialDesignCardBackground}"
+                             materialDesign:ShadowAssist.ShadowDepth="Depth1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Nombre -->
+                <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                    <TextBlock Text="Nombre completo" FontSize="12" Margin="2,0,0,4"
+                               Foreground="{DynamicResource MaterialDesignBody}"/>
+                    <TextBox x:Name="txtNombre"
+                             Height="36" Padding="10,0"
+                             materialDesign:HintAssist.Hint="Nombre completo"/>
+                </StackPanel>
+
+                <!-- Usuario -->
+                <StackPanel Grid.Column="1" Margin="8,0,8,0">
+                    <TextBlock Text="Usuario" FontSize="12" Margin="2,0,0,4"
+                               Foreground="{DynamicResource MaterialDesignBody}"/>
+                    <TextBox x:Name="txtUsuario"
+                             Height="36" Padding="10,0"
+                             materialDesign:HintAssist.Hint="Nombre de usuario"/>
+                </StackPanel>
+
+                <!-- Clave -->
+                <StackPanel Grid.Column="2" Margin="0,0,8,0">
+                    <TextBlock Text="Contraseña" FontSize="12" Margin="2,0,0,4"
+                               Foreground="{DynamicResource MaterialDesignBody}"/>
+                    <PasswordBox x:Name="txtClave"
+                                 Height="36" Padding="10,0"
+                                 materialDesign:HintAssist.Hint="Contraseña"/>
+                </StackPanel>
+
+                <!-- Rol -->
+                <StackPanel Grid.Column="3">
+                    <TextBlock Text="Rol" FontSize="12" Margin="2,0,0,4"
+                               Foreground="{DynamicResource MaterialDesignBody}"/>
+                    <ComboBox x:Name="cbRol"
+                              Height="36" Padding="8,0"
+                              materialDesign:HintAssist.Hint="Selecciona un rol">
+                        <ComboBoxItem Content="Administrador"/>
+                        <ComboBoxItem Content="Cajero"/>
+                    </ComboBox>
+                </StackPanel>
+            </Grid>
+        </materialDesign:Card>
+
+        <!-- Listado -->
+        <materialDesign:Card Grid.Row="2"
+                             Padding="12" Margin="0,0,0,12"
+                             Background="{DynamicResource MaterialDesignCardBackground}"
+                             materialDesign:ShadowAssist.ShadowDepth="Depth2">
+            <DataGrid x:Name="dgUsuarios"
+                      AutoGenerateColumns="False"
+                      CanUserAddRows="False"
+                      SelectionMode="Single"
+                      IsReadOnly="True"
+                      SelectionChanged="dgUsuarios_SelectionChanged"
+                      Background="Transparent"
+                      BorderThickness="0"
+                      HeadersVisibility="Column"
+                      AlternationCount="2"
+                      AlternatingRowBackground="#0FFFFFFF"
+                      materialDesign:DataGridAssist.CellPadding="10,6,10,6"
+                      materialDesign:DataGridAssist.ColumnHeaderPadding="10,8,10,8">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="80"/>
+                    <DataGridTextColumn Header="Nombre" Binding="{Binding Nombre}" Width="*" />
+                    <DataGridTextColumn Header="Usuario" Binding="{Binding UsuarioNombre}" Width="220"/>
+                    <DataGridTextColumn Header="Rol" Binding="{Binding Rol}" Width="180"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </materialDesign:Card>
+
+        <!-- Acciones -->
+        <DockPanel Grid.Row="3">
+            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                <Button x:Name="btnAgregar"
+                        Padding="14,6"
+                        Margin="0,0,8,0"
+                        Background="{StaticResource BrushBtnPrimary}"
+                        Foreground="White"
+                        Click="btnAgregar_Click">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}"/>
+                    </Button.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE710;" Margin="0,0,6,0"/>
+                        <TextBlock Text="Agregar"/>
+                    </StackPanel>
+                </Button>
+
+                <Button x:Name="btnActualizar"
+                        Padding="14,6"
+                        Margin="0,0,8,0"
+                        Background="{StaticResource BrushBtnAccent}"
+                        Foreground="White"
+                        Click="btnActualizar_Click">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
+                            <Setter Property="IsEnabled" Value="True"/>
+                            <Style.Triggers>
+                                <!-- Deshabilitar si no hay selección -->
+                                <DataTrigger Binding="{Binding SelectedItem, ElementName=dgUsuarios}" Value="{x:Null}">
+                                    <Setter Property="IsEnabled" Value="False"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8A7;" Margin="0,0,6,0"/>
+                        <TextBlock Text="Actualizar"/>
+                    </StackPanel>
+                </Button>
+
+                <Button x:Name="btnEliminar"
+                        Padding="14,6"
+                        Margin="0,0,8,0"
+                        Background="{StaticResource BrushBtnDanger}"
+                        Foreground="White"
+                        Click="btnEliminar_Click">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
+                            <Setter Property="IsEnabled" Value="True"/>
+                            <Style.Triggers>
+                                <!-- Deshabilitar si no hay selección -->
+                                <DataTrigger Binding="{Binding SelectedItem, ElementName=dgUsuarios}" Value="{x:Null}">
+                                    <Setter Property="IsEnabled" Value="False"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE74D;" Margin="0,0,6,0"/>
+                        <TextBlock Text="Eliminar"/>
+                    </StackPanel>
+                </Button>
+
+                <Button x:Name="btnLimpiar"
+                        Padding="14,6"
+                        Background="{StaticResource BrushBtnNeutral}"
+                        Foreground="White"
+                        Click="btnLimpiar_Click">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}"/>
+                    </Button.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE894;" Margin="0,0,6,0"/>
+                        <TextBlock Text="Limpiar selección"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </DockPanel>
+    </Grid>
+</Window>

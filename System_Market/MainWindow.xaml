@@ -1,0 +1,281 @@
+﻿<Window x:Class="System_Market.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Minimarket"
+        Height="640" Width="1180"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource MaterialDesignPaper}"
+        FontFamily="Segoe UI"
+        Loaded="Window_Loaded">
+
+    <Window.Resources>
+        <!-- Colores -->
+        <SolidColorBrush x:Key="KpiCardBg" Color="#2F3C4A"/>
+        <SolidColorBrush x:Key="KpiTitleBrush" Color="#B0FFFFFF"/>
+        <SolidColorBrush x:Key="KpiValueBrush" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="TopBarBg" Color="#3F51B5"/>
+        <SolidColorBrush x:Key="RoleChipBg" Color="#546E7A"/>
+
+        <!-- Tarjetas KPI -->
+        <Style TargetType="materialDesign:Card" x:Key="KpiCard">
+            <Setter Property="Margin" Value="6"/>
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="MinHeight" Value="110"/>
+            <Setter Property="Background" Value="{StaticResource KpiCardBg}"/>
+            <Setter Property="materialDesign:ShadowAssist.ShadowDepth" Value="Depth2"/>
+        </Style>
+
+        <Style TargetType="TextBlock" x:Key="KpiTitle">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{StaticResource KpiTitleBrush}"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+        </Style>
+
+        <Style TargetType="TextBlock" x:Key="KpiValue">
+            <Setter Property="FontSize" Value="22"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{StaticResource KpiValueBrush}"/>
+        </Style>
+
+        <!-- Botones -->
+        <Style x:Key="BtnBase" TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="10,4"/>
+            <Setter Property="Margin" Value="0,0,8,8"/>
+            <Setter Property="MinWidth" Value="110"/>
+            <Setter Property="materialDesign:ShadowAssist.ShadowDepth" Value="Depth1"/>
+        </Style>
+        <Style x:Key="BtnPrimary" TargetType="Button" BasedOn="{StaticResource BtnBase}">
+            <Setter Property="Background" Value="#3F51B5"/>
+        </Style>
+        <Style x:Key="BtnAccent" TargetType="Button" BasedOn="{StaticResource BtnBase}">
+            <Setter Property="Background" Value="#2196F3"/>
+        </Style>
+        <Style x:Key="BtnWarn" TargetType="Button" BasedOn="{StaticResource BtnBase}">
+            <Setter Property="Background" Value="#FF9800"/>
+        </Style>
+        <Style x:Key="BtnSuccess" TargetType="Button" BasedOn="{StaticResource BtnBase}">
+            <Setter Property="Background" Value="#009688"/>
+        </Style>
+
+        <!-- Icono KPI -->
+        <Style x:Key="IconKpi" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+            <Setter Property="FontSize" Value="32"/>
+            <Setter Property="Foreground" Value="#81D4FA"/>
+            <Setter Property="Opacity" Value="0.85"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+            <Setter Property="Margin" Value="0,0,0,6"/>
+        </Style>
+
+        <!-- Chip Rol -->
+        <Style x:Key="RoleChip" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource RoleChipBg}"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="8,2"/>
+            <Setter Property="Margin" Value="8,0,0,0"/>
+        </Style>
+
+        <!-- Botón de acción rápida -->
+        <Style x:Key="QuickActionButton" TargetType="Button" BasedOn="{StaticResource BtnBase}">
+            <Setter Property="Background" Value="#3F51B5"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="MinWidth" Value="170"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="56"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Top bar -->
+        <Border Grid.Row="0" Background="{StaticResource TopBarBg}">
+            <Grid Margin="14,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Sistema Minimarket"
+                               Foreground="White"
+                               FontSize="18"
+                               FontWeight="SemiBold"
+                               Margin="0,0,20,0"/>
+                    <Button Content="Dashboard"
+                            Style="{StaticResource BtnPrimary}"
+                            Padding="12,4"
+                            Margin="0,0,10,0"
+                            Click="BtnDashboard_Click"/>
+                    <Button Content="Refrescar"
+                            Style="{StaticResource BtnAccent}"
+                            Padding="12,4"
+                            Click="BtnRefrescarDashboard_Click"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock x:Name="txtUsuarioActual"
+                               Foreground="White"
+                               FontWeight="Bold"
+                               FontSize="14"
+                               VerticalAlignment="Center"
+                               Text="Usuario Demo"/>
+                    <Border x:Name="bdRol" Style="{StaticResource RoleChip}">
+                        <TextBlock x:Name="txtRolUsuario"
+                                   Text="Administrador"
+                                   Foreground="White"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"/>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="220"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Menú lateral -->
+            <Border Grid.Column="0" Background="#F8F9FA" BorderBrush="#D9DEE2" BorderThickness="0,0,1,0">
+                <StackPanel Margin="14">
+                    <TextBlock Text="Menú" FontWeight="SemiBold" Foreground="#546E7A" Margin="2,4,2,12"/>
+                    <Button Content="Productos" Style="{StaticResource BtnSuccess}" Click="BtnProductos_Click" Margin="0,0,0,6"/>
+                    <Button Content="Ventas" Style="{StaticResource BtnAccent}" Click="BtnVentas_Click" Margin="0,0,0,6"/>
+                    <Button Content="Compras" Style="{StaticResource BtnWarn}" Click="BtnCompras_Click" Margin="0,0,0,6"/>
+                    <Button Content="Proveedores" Style="{StaticResource BtnPrimary}" Click="BtnProveedores_Click" Margin="0,0,0,6"/>
+                    <Button Content="Usuarios" Style="{StaticResource BtnPrimary}" Click="BtnUsuarios_Click" Margin="0,0,0,6"/>
+                    <Button Content="Categorías" Style="{StaticResource BtnPrimary}" Click="BtnCategorias_Click" Margin="0,6,0,6"/>
+                    <Separator/>
+                    <Button Content="Reportes" Style="{StaticResource BtnPrimary}" Click="BtnReportes_Click"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Contenido -->
+            <ScrollViewer Grid.Column="1" Padding="18" Background="#F2F4F7">
+                <StackPanel>
+
+                    <!-- KPIs -->
+                    <UniformGrid Rows="1" Columns="4" Margin="0,0,0,18">
+                        <materialDesign:Card Style="{StaticResource KpiCard}">
+                            <StackPanel>
+                                <TextBlock Text="&#xE14C;" Style="{StaticResource IconKpi}"/>
+                                <TextBlock Text="Productos" Style="{StaticResource KpiTitle}"/>
+                                <TextBlock x:Name="txtTotalProductos" Text="0" Style="{StaticResource KpiValue}"/>
+                            </StackPanel>
+                        </materialDesign:Card>
+
+                        <materialDesign:Card Style="{StaticResource KpiCard}">
+                            <StackPanel>
+                                <TextBlock Text="&#xE7BF;" Style="{StaticResource IconKpi}"/>
+                                <TextBlock Text="Ventas Hoy" Style="{StaticResource KpiTitle}"/>
+                                <TextBlock x:Name="txtVentasHoy" Text="S/ 0.00" Style="{StaticResource KpiValue}"/>
+                            </StackPanel>
+                        </materialDesign:Card>
+
+                        <materialDesign:Card Style="{StaticResource KpiCard}">
+                            <StackPanel>
+                                <TextBlock Text="&#xE73E;" Style="{StaticResource IconKpi}"/>
+                                <TextBlock Text="Compras Hoy" Style="{StaticResource KpiTitle}"/>
+                                <TextBlock x:Name="txtComprasHoy" Text="S/ 0.00" Style="{StaticResource KpiValue}"/>
+                            </StackPanel>
+                        </materialDesign:Card>
+
+                        <materialDesign:Card Style="{StaticResource KpiCard}">
+                            <StackPanel>
+                                <TextBlock Text="&#xE710;" Style="{StaticResource IconKpi}"/>
+                                <TextBlock Text="Stock Bajo" Style="{StaticResource KpiTitle}"/>
+                                <TextBlock x:Name="txtStockBajo" Text="0" Style="{StaticResource KpiValue}"/>
+                            </StackPanel>
+                        </materialDesign:Card>
+                    </UniformGrid>
+
+                    <!-- Más vendido -->
+                    <materialDesign:Card Style="{StaticResource KpiCard}" Margin="0,0,0,22" MinHeight="90">
+                        <StackPanel>
+                            <TextBlock Text="&#xE732;" Style="{StaticResource IconKpi}" FontSize="26" Margin="0,0,0,2"/>
+                            <TextBlock Text="Más Vendido Hoy" Style="{StaticResource KpiTitle}"/>
+                            <TextBlock x:Name="txtProductoMasVendido" Text="Sin ventas"
+                                       Style="{StaticResource KpiValue}" FontSize="18" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </materialDesign:Card>
+
+                    <!-- Acciones rápidas (dinámicas) -->
+                    <materialDesign:Card Padding="16" materialDesign:ShadowAssist.ShadowDepth="Depth2">
+                        <StackPanel>
+                            <TextBlock Text="Acciones rápidas"
+                                       FontWeight="SemiBold" FontSize="16"
+                                       Margin="0,0,0,12"
+                                       Foreground="#263238"/>
+
+                            <!-- Lista de acciones dinámicas -->
+                            <ItemsControl x:Name="icQuickActions">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Style="{StaticResource QuickActionButton}"
+                                                Click="QuickAction_Click"
+                                                ToolTip="Click para ejecutar. Clic derecho para quitar.">
+                                            <Button.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem Header="Quitar" Click="QuickAction_Quitar_Click"/>
+                                                </ContextMenu>
+                                            </Button.ContextMenu>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock FontFamily="Segoe MDL2 Assets"
+                                                           Text="{Binding Icono}"
+                                                           Margin="0,0,6,0"
+                                                           Foreground="White"/>
+                                                <TextBlock Text="{Binding Titulo}" Foreground="White"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- Agregar nueva acción -->
+                            <Grid Margin="0,14,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <ComboBox x:Name="cbAccion"
+                                          Grid.Column="0"
+                                          Height="36"
+                                          Padding="8,0"
+                                          DisplayMemberPath="Titulo"
+                                          SelectedValuePath="Clave"
+                                          materialDesign:HintAssist.Hint="Agregar acción rápida"/>
+
+                                <Button Grid.Column="1"
+                                        Style="{StaticResource BtnSuccess}"
+                                        Content="Agregar"
+                                        Padding="14,6"
+                                        Click="BtnAgregarAccion_Click"/>
+                            </Grid>
+
+                            <TextBlock Text="Puedes reusar, agregar y quitar acciones. Se guardan para la próxima sesión."
+                                       Margin="4,10,0,0"
+                                       Foreground="#607D8B"
+                                       FontSize="12"/>
+                        </StackPanel>
+                    </materialDesign:Card>
+
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</Window>

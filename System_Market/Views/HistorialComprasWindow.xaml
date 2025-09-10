@@ -1,0 +1,186 @@
+﻿<Window x:Class="System_Market.Views.HistorialComprasWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Historial de Compras"
+        Height="650" Width="1000"
+        MinHeight="520" MinWidth="860"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource MaterialDesignPaper}"
+        FontFamily="Segoe UI"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True">
+
+    <Window.Resources>
+        <!-- Paleta de botones local -->
+        <SolidColorBrush x:Key="BrushBtnPrimary" Color="#3F51B5"/>
+        <SolidColorBrush x:Key="BrushBtnAccent"  Color="#7E57C2"/>
+        <SolidColorBrush x:Key="BrushBtnDanger"  Color="#EF5350"/>
+        <SolidColorBrush x:Key="BrushBtnNeutral" Color="#607D8B"/>
+    </Window.Resources>
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>     <!-- Encabezado -->
+            <RowDefinition Height="*"/>        <!-- Compras -->
+            <RowDefinition Height="Auto"/>     <!-- Splitter -->
+            <RowDefinition Height="1.5*"/>     <!-- Detalles (más grande) -->
+            <RowDefinition Height="Auto"/>     <!-- Acciones -->
+        </Grid.RowDefinitions>
+
+        <!-- Encabezado -->
+        <DockPanel Grid.Row="0" Margin="0,0,0,12">
+            <TextBlock Text="Historial de compras"
+                       FontSize="20" FontWeight="Bold"
+                       Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+        </DockPanel>
+
+        <!-- Compras -->
+        <materialDesign:Card Grid.Row="1"
+                             Padding="12" Margin="0,0,0,12"
+                             Background="{DynamicResource MaterialDesignCardBackground}"
+                             materialDesign:ShadowAssist.ShadowDepth="Depth2">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="Compras"
+                           FontWeight="SemiBold" Margin="0,0,0,8"
+                           Foreground="{DynamicResource MaterialDesignBody}"/>
+
+                <DataGrid x:Name="dgCompras"
+                          Grid.Row="1"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True"
+                          SelectionMode="Single"
+                          SelectionChanged="dgCompras_SelectionChanged"
+                          Background="Transparent"
+                          BorderThickness="0"
+                          HeadersVisibility="Column"
+                          AlternationCount="2"
+                          AlternatingRowBackground="#0FFFFFFF"
+                          materialDesign:DataGridAssist.CellPadding="10,6,10,6"
+                          materialDesign:DataGridAssist.ColumnHeaderPadding="10,8,10,8">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Proveedor" Binding="{Binding ProveedorNombre}" Width="200"/>
+                        <DataGridTextColumn Header="Fecha" Binding="{Binding Fecha, StringFormat={}{0:dd/MM/yyyy HH:mm}}" Width="170"/>
+                        <DataGridTextColumn Header="Total" Binding="{Binding Total, StringFormat={}{0:N2}}" Width="110"/>
+                        <DataGridTextColumn Header="Estado" Binding="{Binding Estado}" Width="110"/>
+                        <DataGridTextColumn Header="Motivo Anulación" Binding="{Binding MotivoAnulacion}" Width="*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </materialDesign:Card>
+
+        <!-- Splitter para redimensionar -->
+        <GridSplitter Grid.Row="2"
+                      Height="8"
+                      HorizontalAlignment="Stretch"
+                      Background="#33000000"
+                      ShowsPreview="True"/>
+
+        <!-- Detalles -->
+        <materialDesign:Card Grid.Row="3"
+                             Padding="12" Margin="0,12,0,12"
+                             Background="{DynamicResource MaterialDesignCardBackground}"
+                             materialDesign:ShadowAssist.ShadowDepth="Depth1">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="Detalles de la compra seleccionada"
+                           FontWeight="SemiBold" Margin="0,0,0,8"
+                           Foreground="{DynamicResource MaterialDesignBody}"/>
+
+                <DataGrid x:Name="dgDetallesCompra"
+                          Grid.Row="1"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True"
+                          Background="Transparent"
+                          BorderThickness="0"
+                          HeadersVisibility="Column"
+                          AlternationCount="2"
+                          AlternatingRowBackground="#0FFFFFFF"
+                          materialDesign:DataGridAssist.CellPadding="10,6,10,6"
+                          materialDesign:DataGridAssist.ColumnHeaderPadding="10,8,10,8">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Producto" Binding="{Binding ProductoNombre}" Width="*" />
+                        <DataGridTextColumn Header="Cantidad" Binding="{Binding Cantidad}" Width="120" />
+                        <DataGridTextColumn Header="Precio Unitario" Binding="{Binding PrecioUnitario, StringFormat={}{0:N2}}" Width="150" />
+                        <DataGridTextColumn Header="Subtotal" Binding="{Binding Subtotal, StringFormat={}{0:N2}}" Width="150" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </materialDesign:Card>
+
+        <!-- Acciones -->
+        <DockPanel Grid.Row="4">
+            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                <Button x:Name="btnAnularCompra"
+                        Padding="14,6"
+                        Margin="0,0,8,0"
+                        Click="btnAnularCompra_Click"
+                        Background="{StaticResource BrushBtnDanger}"
+                        Foreground="White"
+                        ToolTip="Anular la compra seleccionada">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
+                            <Setter Property="IsEnabled" Value="True"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedItem, ElementName=dgCompras}" Value="{x:Null}">
+                                    <Setter Property="IsEnabled" Value="False"/>
+                                </DataTrigger>
+                                <DataTrigger Value="Activa">
+                                    <DataTrigger.Binding>
+                                        <Binding ElementName="dgCompras" Path="SelectedItem.Estado"/>
+                                    </DataTrigger.Binding>
+                                    <Setter Property="IsEnabled" Value="True"/>
+                                </DataTrigger>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding SelectedItem, ElementName=dgCompras}" Value="{x:Null}"/>
+                                        <Condition Binding="{Binding SelectedItem.Estado, ElementName=dgCompras}" Value="Activa"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="IsEnabled" Value="False"/>
+                                </MultiDataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE711;" Margin="0,0,6,0"/>
+                        <TextBlock Text="Anular compra"/>
+                    </StackPanel>
+                </Button>
+
+                <Button x:Name="btnRefrescar"
+                        Padding="14,6"
+                        Margin="0,0,8,0"
+                        Click="btnRefrescar_Click"
+                        Background="{StaticResource BrushBtnPrimary}"
+                        Foreground="White"
+                        ToolTip="Recargar historial">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE72C;" Margin="0,0,6,0"/>
+                        <TextBlock Text="Refrescar"/>
+                    </StackPanel>
+                </Button>
+
+                <Button x:Name="btnCerrar"
+                        Padding="14,6"
+                        Click="btnCerrar_Click"
+                        Background="{StaticResource BrushBtnNeutral}"
+                        Foreground="White"
+                        ToolTip="Cerrar ventana">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8BB;" Margin="0,0,6,0"/>
+                        <TextBlock Text="Cerrar"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </DockPanel>
+    </Grid>
+</Window>

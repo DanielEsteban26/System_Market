@@ -1,0 +1,227 @@
+﻿<Window x:Class="System_Market.Views.ProductoEdicionWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+        Title="Producto"
+        Height="471" Width="418"
+        MinHeight="420" MinWidth="600"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource MaterialDesignPaper}"
+        FontFamily="Segoe UI"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True">
+
+    <Window.Resources>
+        <!-- Tamaños unificados -->
+        <sys:Double x:Key="CtlHeight">36</sys:Double>
+        <sys:Double x:Key="CtlFontSize">13</sys:Double>
+        <Thickness x:Key="CtlPadding">14,6</Thickness>
+
+        <!-- Paleta de botones -->
+        <SolidColorBrush x:Key="BrushBtnPrimary" Color="#3F51B5"/>
+        <SolidColorBrush x:Key="BrushBtnNeutral" Color="#607D8B"/>
+    </Window.Resources>
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <!-- Header -->
+            <RowDefinition Height="*"/>
+            <!-- Form -->
+            <RowDefinition Height="Auto"/>
+            <!-- Actions -->
+        </Grid.RowDefinitions>
+
+        <!-- Encabezado -->
+        <DockPanel Grid.Row="0" Margin="0,0,0,12">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE719;" FontSize="18"
+                           Foreground="{DynamicResource PrimaryHueMidBrush}" Margin="0,0,6,0"/>
+                <TextBlock Text="Datos del producto" FontSize="18" FontWeight="SemiBold"
+                           Foreground="{DynamicResource MaterialDesignBody}"/>
+            </StackPanel>
+        </DockPanel>
+
+        <!-- Formulario -->
+        <materialDesign:Card Grid.Row="1"
+                             Padding="16"
+                             Background="{DynamicResource MaterialDesignCardBackground}"
+                             materialDesign:ShadowAssist.ShadowDepth="Depth2">
+            <Grid Grid.IsSharedSizeScope="True">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" SharedSizeGroup="col"/>
+                    <ColumnDefinition Width="*" SharedSizeGroup="col"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <!-- fila 0 -->
+                    <RowDefinition Height="12"/>
+                    <RowDefinition Height="Auto"/>
+                    <!-- fila 2 -->
+                    <RowDefinition Height="12"/>
+                    <RowDefinition Height="Auto"/>
+                    <!-- fila 4 -->
+                    <RowDefinition Height="12"/>
+                    <RowDefinition Height="Auto"/>
+                    <!-- fila 6 -->
+                </Grid.RowDefinitions>
+
+                <!-- Código de barras -->
+                <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,8,0">
+                    <TextBlock Text="Código de barras" FontSize="12" Margin="2,0,0,4"
+                               Foreground="{DynamicResource MaterialDesignBody}"/>
+                    <TextBox x:Name="txtCodigoBarras"
+                             Height="{StaticResource CtlHeight}"
+                             FontSize="{StaticResource CtlFontSize}"
+                             Padding="10,0"
+                             ToolTip="Escanea o escribe el código de barras"
+                             materialDesign:HintAssist.Hint="Escanear o escribir código"/>
+                </StackPanel>
+
+                <!-- Nombre -->
+                <StackPanel Grid.Row="0" Grid.Column="1" Margin="8,0,0,0">
+                    <TextBlock Text="Nombre del producto" FontSize="12" Margin="2,0,0,4"
+                               Foreground="{DynamicResource MaterialDesignBody}"/>
+                    <TextBox x:Name="txtNombre"
+                             Height="{StaticResource CtlHeight}"
+                             FontSize="{StaticResource CtlFontSize}"
+                             Padding="10,0"
+                             ToolTip="Nombre comercial del producto"
+                             materialDesign:HintAssist.Hint="Nombre"/>
+                </StackPanel>
+
+                <!-- Categoría -->
+                <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,8,0">
+                    <TextBlock Text="Categoría" FontSize="12" Margin="2,0,0,4"
+                               Foreground="{DynamicResource MaterialDesignBody}"/>
+                    <ComboBox x:Name="cbCategoria"
+                              Height="{StaticResource CtlHeight}"
+                              FontSize="{StaticResource CtlFontSize}"
+                              Padding="8,0"
+                              DisplayMemberPath="Nombre"
+                              SelectedValuePath="Id"
+                              ToolTip="Selecciona una categoría"
+                              materialDesign:HintAssist.Hint="Selecciona una categoría"/>
+                </StackPanel>
+
+                <!-- Proveedor -->
+                <StackPanel Grid.Row="2" Grid.Column="1" Margin="8,0,0,0">
+                    <TextBlock Text="Proveedor" FontSize="12" Margin="2,0,0,4"
+                               Foreground="{DynamicResource MaterialDesignBody}"/>
+                    <ComboBox x:Name="cbProveedor"
+                              Height="{StaticResource CtlHeight}"
+                              FontSize="{StaticResource CtlFontSize}"
+                              Padding="8,0"
+                              DisplayMemberPath="Nombre"
+                              SelectedValuePath="Id"
+                              ToolTip="Selecciona un proveedor"
+                              materialDesign:HintAssist.Hint="Selecciona un proveedor"/>
+                </StackPanel>
+
+                <!-- Precio compra con prefijo S/ -->
+                <StackPanel Grid.Row="4" Grid.Column="0" Margin="0,0,8,0">
+                    <TextBlock Text="Precio de compra (S/)" FontSize="12" Margin="2,0,0,4"
+                               Foreground="{DynamicResource MaterialDesignBody}"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Padding="10,0"
+                                Background="#11000000" BorderBrush="#22000000" BorderThickness="1"
+                                CornerRadius="4,0,0,4">
+                            <TextBlock Text="S/" VerticalAlignment="Center"/>
+                        </Border>
+                        <Border Grid.Column="1"
+                                Background="#11000000" BorderBrush="#22000000" BorderThickness="1"
+                                CornerRadius="0,4,4,0">
+                            <TextBox x:Name="txtPrecioCompra"
+                                     Height="{StaticResource CtlHeight}"
+                                     FontSize="{StaticResource CtlFontSize}"
+                                     Padding="10,0"
+                                     TextAlignment="Right"
+                                     ToolTip="Ejemplo: 12.50"
+                                     materialDesign:HintAssist.Hint="0.00"/>
+                        </Border>
+                    </Grid>
+                </StackPanel>
+
+                <!-- Precio venta con prefijo S/ -->
+                <StackPanel Grid.Row="4" Grid.Column="1" Margin="8,0,0,0">
+                    <TextBlock Text="Precio de venta (S/)" FontSize="12" Margin="2,0,0,4"
+                               Foreground="{DynamicResource MaterialDesignBody}"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Padding="10,0"
+                                Background="#11000000" BorderBrush="#22000000" BorderThickness="1"
+                                CornerRadius="4,0,0,4">
+                            <TextBlock Text="S/" VerticalAlignment="Center"/>
+                        </Border>
+                        <Border Grid.Column="1"
+                                Background="#11000000" BorderBrush="#22000000" BorderThickness="1"
+                                CornerRadius="0,4,4,0">
+                            <TextBox x:Name="txtPrecioVenta"
+                                     Height="{StaticResource CtlHeight}"
+                                     FontSize="{StaticResource CtlFontSize}"
+                                     Padding="10,0"
+                                     TextAlignment="Right"
+                                     ToolTip="Ejemplo: 15.90"
+                                     materialDesign:HintAssist.Hint="0.00"/>
+                        </Border>
+                    </Grid>
+                </StackPanel>
+
+                <!-- Stock -->
+                <StackPanel Grid.Row="6" Grid.ColumnSpan="2">
+                    <TextBlock Text="Cantidad en stock" FontSize="12" Margin="2,0,0,4"
+                               Foreground="{DynamicResource MaterialDesignBody}"/>
+                    <TextBox x:Name="txtStock"
+                             Width="200"
+                             Height="{StaticResource CtlHeight}"
+                             FontSize="{StaticResource CtlFontSize}"
+                             Padding="10,0"
+                             TextAlignment="Right"
+                             ToolTip="Unidades en inventario"
+                             materialDesign:HintAssist.Hint="0"/>
+                </StackPanel>
+            </Grid>
+        </materialDesign:Card>
+
+        <!-- Acciones -->
+        <DockPanel Grid.Row="2" Margin="0,12,0,0">
+            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" HorizontalAlignment="Right">
+                <Button Content="Cancelar"
+                        Padding="{StaticResource CtlPadding}"
+                        MinHeight="{StaticResource CtlHeight}"
+                        Margin="0,0,8,0"
+                        Background="{StaticResource BrushBtnNeutral}"
+                        Foreground="White"
+                        IsCancel="True"
+                        Click="BtnCancelar_Click">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}"/>
+                    </Button.Style>
+                </Button>
+
+                <Button Padding="{StaticResource CtlPadding}"
+                        MinHeight="{StaticResource CtlHeight}"
+                        Background="{StaticResource BrushBtnPrimary}"
+                        Foreground="White"
+                        IsDefault="True"
+                        Click="BtnGuardar_Click">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}"/>
+                    </Button.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE74E;" Margin="0,0,6,0"/>
+                        <TextBlock Text="Guardar"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </DockPanel>
+    </Grid>
+</Window>

@@ -1,0 +1,192 @@
+﻿<Window x:Class="System_Market.Views.ProveedorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Gestión de Proveedores"
+        Height="520" Width="900"
+        MinHeight="480" MinWidth="820"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource MaterialDesignPaper}"
+        FontFamily="Segoe UI"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True">
+
+    <Window.Resources>
+        <!-- Paleta de botones local -->
+        <SolidColorBrush x:Key="BrushBtnPrimary" Color="#3F51B5"/>
+        <SolidColorBrush x:Key="BrushBtnAccent"  Color="#0288D1"/>
+        <SolidColorBrush x:Key="BrushBtnDanger"  Color="#EF5350"/>
+        <SolidColorBrush x:Key="BrushBtnNeutral" Color="#607D8B"/>
+    </Window.Resources>
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <!-- Header -->
+            <RowDefinition Height="Auto"/>
+            <!-- Form -->
+            <RowDefinition Height="*"/>
+            <!-- Grid -->
+            <RowDefinition Height="Auto"/>
+            <!-- Actions -->
+        </Grid.RowDefinitions>
+
+        <!-- Encabezado -->
+        <DockPanel Grid.Row="0" Margin="0,0,0,12">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE716;" FontSize="20"
+                           Foreground="{DynamicResource PrimaryHueMidBrush}" Margin="0,0,6,0"/>
+                <TextBlock Text="Proveedores" FontSize="20" FontWeight="Bold"
+                           Foreground="{DynamicResource MaterialDesignBody}"/>
+            </StackPanel>
+        </DockPanel>
+
+        <!-- Formulario -->
+        <materialDesign:Card Grid.Row="1"
+                             Padding="12" Margin="0,0,0,12"
+                             Background="{DynamicResource MaterialDesignCardBackground}"
+                             materialDesign:ShadowAssist.ShadowDepth="Depth1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Nombre -->
+                <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                    <TextBlock Text="Nombre" FontSize="12" Margin="2,0,0,4"
+                               Foreground="{DynamicResource MaterialDesignBody}"/>
+                    <TextBox x:Name="txtNombre"
+                             Height="36" Padding="10,0"
+                             materialDesign:HintAssist.Hint="Nombre del proveedor"/>
+                </StackPanel>
+
+                <!-- RUC -->
+                <StackPanel Grid.Column="1" Margin="8,0,8,0">
+                    <TextBlock Text="RUC" FontSize="12" Margin="2,0,0,4"
+                               Foreground="{DynamicResource MaterialDesignBody}"/>
+                    <TextBox x:Name="txtRUC"
+                             Height="36" Padding="10,0"
+                             materialDesign:HintAssist.Hint="RUC o identificación"/>
+                </StackPanel>
+
+                <!-- Teléfono -->
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="Teléfono" FontSize="12" Margin="2,0,0,4"
+                               Foreground="{DynamicResource MaterialDesignBody}"/>
+                    <TextBox x:Name="txtTelefono"
+                             Height="36" Padding="10,0"
+                             materialDesign:HintAssist.Hint="Teléfono de contacto"/>
+                </StackPanel>
+            </Grid>
+        </materialDesign:Card>
+
+        <!-- Grilla -->
+        <materialDesign:Card Grid.Row="2"
+                             Padding="12" Margin="0,0,0,12"
+                             Background="{DynamicResource MaterialDesignCardBackground}"
+                             materialDesign:ShadowAssist.ShadowDepth="Depth2">
+            <DataGrid x:Name="dgProveedores"
+                      AutoGenerateColumns="False"
+                      CanUserAddRows="False"
+                      IsReadOnly="True"
+                      SelectionMode="Single"
+                      SelectionChanged="dgProveedores_SelectionChanged"
+                      Background="Transparent"
+                      BorderThickness="0"
+                      HeadersVisibility="Column"
+                      AlternationCount="2"
+                      AlternatingRowBackground="#0FFFFFFF"
+                      materialDesign:DataGridAssist.CellPadding="10,6,10,6"
+                      materialDesign:DataGridAssist.ColumnHeaderPadding="10,8,10,8">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="60"/>
+                    <DataGridTextColumn Header="Nombre" Binding="{Binding Nombre}" Width="*"/>
+                    <DataGridTextColumn Header="RUC" Binding="{Binding RUC}" Width="200"/>
+                    <DataGridTextColumn Header="Teléfono" Binding="{Binding Telefono}" Width="180"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </materialDesign:Card>
+
+        <!-- Acciones -->
+        <DockPanel Grid.Row="3">
+            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                <Button x:Name="btnAgregar"
+                        Padding="14,6"
+                        Margin="0,0,8,0"
+                        Background="{StaticResource BrushBtnPrimary}"
+                        Foreground="White"
+                        Click="btnAgregar_Click">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}"/>
+                    </Button.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE710;" Margin="0,0,6,0"/>
+                        <TextBlock Text="Agregar"/>
+                    </StackPanel>
+                </Button>
+
+                <Button x:Name="btnActualizar"
+                        Padding="14,6"
+                        Margin="0,0,8,0"
+                        Background="{StaticResource BrushBtnAccent}"
+                        Foreground="White"
+                        Click="btnActualizar_Click">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
+                            <Setter Property="IsEnabled" Value="True"/>
+                            <Style.Triggers>
+                                <!-- Deshabilitar si no hay selección -->
+                                <DataTrigger Binding="{Binding SelectedItem, ElementName=dgProveedores}" Value="{x:Null}">
+                                    <Setter Property="IsEnabled" Value="False"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8A7;" Margin="0,0,6,0"/>
+                        <TextBlock Text="Actualizar"/>
+                    </StackPanel>
+                </Button>
+
+                <Button x:Name="btnEliminar"
+                        Padding="14,6"
+                        Margin="0,0,8,0"
+                        Background="{StaticResource BrushBtnDanger}"
+                        Foreground="White"
+                        Click="btnEliminar_Click">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
+                            <Setter Property="IsEnabled" Value="True"/>
+                            <Style.Triggers>
+                                <!-- Deshabilitar si no hay selección -->
+                                <DataTrigger Binding="{Binding SelectedItem, ElementName=dgProveedores}" Value="{x:Null}">
+                                    <Setter Property="IsEnabled" Value="False"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE74D;" Margin="0,0,6,0"/>
+                        <TextBlock Text="Eliminar"/>
+                    </StackPanel>
+                </Button>
+
+                <Button x:Name="btnRefrescar"
+                        Padding="14,6"
+                        Background="{StaticResource BrushBtnNeutral}"
+                        Foreground="White"
+                        Click="btnRefrescar_Click">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}"/>
+                    </Button.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE72C;" Margin="0,0,6,0"/>
+                        <TextBlock Text="Refrescar"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </DockPanel>
+    </Grid>
+</Window>

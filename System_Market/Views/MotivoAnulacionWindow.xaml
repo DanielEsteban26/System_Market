@@ -1,0 +1,125 @@
+﻿<Window x:Class="System_Market.Views.MotivoAnulacionWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Motivo de Anulación"
+        Height="320" Width="560"
+        MinHeight="260" MinWidth="500"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="{DynamicResource MaterialDesignPaper}"
+        FontFamily="Segoe UI"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True">
+
+    <Window.Resources>
+        <SolidColorBrush x:Key="BrushBtnPrimary" Color="#3F51B5"/>
+        <SolidColorBrush x:Key="BrushBtnNeutral" Color="#607D8B"/>
+        <!-- Redondeo para los Cards (reemplaza CornerRadius en Card) -->
+        <CornerRadius x:Key="MaterialDesignCardCornerRadius">8</CornerRadius>
+    </Window.Resources>
+
+    <Grid Margin="16">
+        <materialDesign:Card Padding="16"
+                             Background="{DynamicResource MaterialDesignCardBackground}"
+                             materialDesign:ShadowAssist.ShadowDepth="Depth3">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>  <!-- Header -->
+                    <RowDefinition Height="Auto"/>  <!-- Info -->
+                    <RowDefinition Height="*"/>     <!-- Textbox + contador -->
+                    <RowDefinition Height="Auto"/>  <!-- Footer -->
+                </Grid.RowDefinitions>
+
+                <!-- Header -->
+                <DockPanel Grid.Row="0" LastChildFill="False" Margin="0,0,0,8">
+                    <TextBlock FontFamily="Segoe MDL2 Assets"
+                               Text="&#xE783;"
+                               FontSize="18"
+                               Foreground="{DynamicResource PrimaryHueMidBrush}"
+                               Margin="0,0,6,0"/>
+                    <TextBlock Text="Ingrese el motivo de anulación"
+                               FontSize="16" FontWeight="SemiBold"
+                               Foreground="{DynamicResource MaterialDesignBody}"/>
+                </DockPanel>
+
+                <!-- Info -->
+                <TextBlock Grid.Row="1"
+                           Text="Este motivo quedará registrado junto a la anulación y será visible en el historial."
+                           Foreground="{DynamicResource MaterialDesignBody}"
+                           Opacity="0.75"
+                           TextWrapping="Wrap"
+                           Margin="0,0,0,8"/>
+
+                <!-- Motivo -->
+                <Grid Grid.Row="2">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBox x:Name="txtMotivo"
+                             Grid.Row="0"
+                             materialDesign:HintAssist.Hint="Escribe el motivo..."
+                             Padding="10"
+                             FontSize="13"
+                             TextWrapping="Wrap"
+                             AcceptsReturn="True"
+                             VerticalScrollBarVisibility="Auto"
+                             MaxLength="300"
+                             MinHeight="180"
+                             materialDesign:TextFieldAssist.DecorationVisibility="Hidden"/>
+
+                    <!-- Contador -->
+                    <DockPanel Grid.Row="1" Margin="0,6,0,0">
+                        <TextBlock Text="{Binding Text.Length, ElementName=txtMotivo}"
+                                   Foreground="{DynamicResource MaterialDesignBody}"
+                                   Opacity="0.7"/>
+                        <TextBlock Text="/300" Margin="2,0,0,0"
+                                   Foreground="{DynamicResource MaterialDesignBody}"
+                                   Opacity="0.7"/>
+                    </DockPanel>
+                </Grid>
+
+                <!-- Footer -->
+                <DockPanel Grid.Row="3" Margin="0,12,0,0">
+                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                        <Button Content="Cancelar"
+                                Padding="14,6"
+                                Margin="0,0,8,0"
+                                Background="{StaticResource BrushBtnNeutral}"
+                                Foreground="White"
+                                IsCancel="True">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}"/>
+                            </Button.Style>
+                        </Button>
+
+                        <Button x:Name="btnConfirmar"
+                                Padding="14,6"
+                                Background="{StaticResource BrushBtnPrimary}"
+                                Foreground="White"
+                                IsDefault="True"
+                                Click="BtnConfirmar_Click">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
+                                    <Setter Property="IsEnabled" Value="True"/>
+                                    <Style.Triggers>
+                                        <!-- Deshabilita si no hay texto -->
+                                        <DataTrigger Binding="{Binding Text.Length, ElementName=txtMotivo}" Value="0">
+                                            <Setter Property="IsEnabled" Value="False"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8FB;" Margin="0,0,6,0"/>
+                                <TextBlock Text="Confirmar"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </DockPanel>
+            </Grid>
+        </materialDesign:Card>
+    </Grid>
+</Window>

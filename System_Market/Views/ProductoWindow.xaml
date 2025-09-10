@@ -1,0 +1,199 @@
+﻿<Window x:Class="System_Market.Views.ProductoWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Gestión de Productos"
+        Height="600" Width="1134"
+        MinHeight="520" MinWidth="860"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource MaterialDesignPaper}"
+        FontFamily="Segoe UI"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True">
+
+    <Window.Resources>
+        <!-- Paleta local de botones -->
+        <SolidColorBrush x:Key="BrushBtnPrimary" Color="#3F51B5"/>
+        <SolidColorBrush x:Key="BrushBtnAccent"  Color="#0288D1"/>
+        <SolidColorBrush x:Key="BrushBtnDanger"  Color="#EF5350"/>
+        <SolidColorBrush x:Key="BrushBtnNeutral" Color="#607D8B"/>
+    </Window.Resources>
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <!-- Header -->
+            <RowDefinition Height="Auto"/>
+            <!-- Filtros -->
+            <RowDefinition Height="*"/>
+            <!-- Grilla -->
+            <RowDefinition Height="Auto"/>
+            <!-- Acciones -->
+        </Grid.RowDefinitions>
+
+        <!-- Encabezado -->
+        <DockPanel Grid.Row="0" Margin="0,0,0,12">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE719;" FontSize="20"
+                           Foreground="{DynamicResource PrimaryHueMidBrush}" Margin="0,0,6,0"/>
+                <TextBlock Text="Productos" FontSize="20" FontWeight="Bold"
+                           Foreground="{DynamicResource MaterialDesignBody}"/>
+            </StackPanel>
+        </DockPanel>
+
+        <!-- Filtros -->
+        <materialDesign:Card Grid.Row="1"
+                             Padding="12" Margin="0,0,0,12"
+                             Background="{DynamicResource MaterialDesignCardBackground}"
+                             materialDesign:ShadowAssist.ShadowDepth="Depth1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBox x:Name="txtBuscar"
+                         Grid.Column="0"
+                         Height="36"
+                         Padding="10,0"
+                         VerticalContentAlignment="Center"
+                         materialDesign:HintAssist.Hint="Buscar producto o código"
+                         TextChanged="txtBuscar_TextChanged"/>
+
+                <Button Grid.Column="1"
+                        Padding="14,6"
+                        Margin="8,0,0,0"
+                        Background="{StaticResource BrushBtnAccent}"
+                        Foreground="White"
+                        Click="BtnBuscar_Click">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}"/>
+                    </Button.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE721;" Margin="0,0,6,0"/>
+                        <TextBlock Text="Buscar"/>
+                    </StackPanel>
+                </Button>
+
+                <Button Grid.Column="2"
+                        Padding="14,6"
+                        Margin="8,0,0,0"
+                        Background="{StaticResource BrushBtnPrimary}"
+                        Foreground="White"
+                        Click="BtnRefrescar_Click">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}"/>
+                    </Button.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE72C;" Margin="0,0,6,0"/>
+                        <TextBlock Text="Refrescar"/>
+                    </StackPanel>
+                </Button>
+            </Grid>
+        </materialDesign:Card>
+
+        <!-- Grilla de productos -->
+        <materialDesign:Card Grid.Row="2"
+                             Padding="12" Margin="0,0,0,12"
+                             Background="{DynamicResource MaterialDesignCardBackground}"
+                             materialDesign:ShadowAssist.ShadowDepth="Depth2">
+            <DataGrid x:Name="dgProductos"
+                      AutoGenerateColumns="False"
+                      IsReadOnly="True"
+                      SelectionMode="Single"
+                      SelectionChanged="dgProductos_SelectionChanged"
+                      Background="Transparent"
+                      BorderThickness="0"
+                      HeadersVisibility="Column"
+                      AlternationCount="2"
+                      AlternatingRowBackground="#0FFFFFFF"
+                      materialDesign:DataGridAssist.CellPadding="10,6,10,6"
+                      materialDesign:DataGridAssist.ColumnHeaderPadding="10,8,10,8">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Código" Binding="{Binding CodigoBarras}" Width="160"/>
+                    <DataGridTextColumn Header="Nombre" Binding="{Binding Nombre}" Width="*" />
+                    <DataGridTextColumn Header="Categoría" Binding="{Binding CategoriaNombre}" Width="180"/>
+                    <DataGridTextColumn Header="Proveedor" Binding="{Binding ProveedorNombre}" Width="200"/>
+                    <DataGridTextColumn Header="Compra (S/)" Binding="{Binding PrecioCompra, StringFormat={}{0:N2}}" Width="130"/>
+                    <DataGridTextColumn Header="Venta (S/)" Binding="{Binding PrecioVenta, StringFormat={}{0:N2}}" Width="130"/>
+                    <DataGridTextColumn Header="Stock" Binding="{Binding Stock}" Width="100"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </materialDesign:Card>
+
+        <!-- Acciones -->
+        <DockPanel Grid.Row="3">
+            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                <Button Padding="14,6"
+                        Margin="0,0,8,0"
+                        Background="{StaticResource BrushBtnPrimary}"
+                        Foreground="White"
+                        Click="BtnAgregar_Click">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}"/>
+                    </Button.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE710;" Margin="0,0,6,0"/>
+                        <TextBlock Text="Agregar"/>
+                    </StackPanel>
+                </Button>
+
+                <Button Padding="14,6"
+                        Margin="0,0,8,0"
+                        Background="{StaticResource BrushBtnAccent}"
+                        Foreground="White"
+                        Click="BtnActualizar_Click">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
+                            <Setter Property="IsEnabled" Value="True"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedItem, ElementName=dgProductos}" Value="{x:Null}">
+                                    <Setter Property="IsEnabled" Value="False"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8A7;" Margin="0,0,6,0"/>
+                        <TextBlock Text="Actualizar"/>
+                    </StackPanel>
+                </Button>
+
+                <Button Padding="14,6"
+                        Margin="0,0,8,0"
+                        Background="{StaticResource BrushBtnDanger}"
+                        Foreground="White"
+                        Click="BtnEliminar_Click">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
+                            <Setter Property="IsEnabled" Value="True"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedItem, ElementName=dgProductos}" Value="{x:Null}">
+                                    <Setter Property="IsEnabled" Value="False"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE74D;" Margin="0,0,6,0"/>
+                        <TextBlock Text="Eliminar"/>
+                    </StackPanel>
+                </Button>
+
+                <Button Padding="14,6"
+                        Background="{StaticResource BrushBtnNeutral}"
+                        Foreground="White"
+                        Click="BtnLimpiar_Click">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}"/>
+                    </Button.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE894;" Margin="0,0,6,0"/>
+                        <TextBlock Text="Limpiar selección"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </DockPanel>
+    </Grid>
+</Window>
