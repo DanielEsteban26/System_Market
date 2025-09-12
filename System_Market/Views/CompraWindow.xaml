@@ -10,7 +10,8 @@
         Background="{DynamicResource MaterialDesignPaper}"
         FontFamily="Segoe UI"
         UseLayoutRounding="True"
-        SnapsToDevicePixels="True">
+        SnapsToDevicePixels="True"
+        Loaded="Window_Loaded">
 
     <Window.Resources>
         <!-- Métricas -->
@@ -25,7 +26,7 @@
         <SolidColorBrush x:Key="BrushBtnAccent"  Color="#7E57C2"/>
         <SolidColorBrush x:Key="BrushBtnDanger"  Color="#EF5350"/>
 
-        <!-- Encabezado DataGrid (si falla la key BasedOn, elimina la línea BasedOn=...) -->
+        <!-- Encabezado DataGrid -->
         <Style x:Key="GridHeaderStyle"
                TargetType="DataGridColumnHeader"
                BasedOn="{StaticResource MaterialDesignDataGridColumnHeader}">
@@ -65,6 +66,16 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
+
+        <!-- ItemTemplate producto (aunque el combo esté oculto) -->
+        <DataTemplate x:Key="ProductoItemTemplate">
+            <StackPanel>
+                <TextBlock Text="{Binding Nombre}" FontWeight="SemiBold"/>
+                <TextBlock FontSize="11" Foreground="{DynamicResource MaterialDesignBody}">
+                    <Run Text="Código: "/><Run Text="{Binding CodigoBarras}"/>
+                </TextBlock>
+            </StackPanel>
+        </DataTemplate>
     </Window.Resources>
 
     <Grid Margin="16">
@@ -129,14 +140,42 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- Producto -->
-                    <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                    <!-- Scanee producto (etiqueta arriba, campo debajo centrado) -->
+                    <StackPanel Grid.Column="0" Margin="0,0,8,0" VerticalAlignment="Top">
+                        <TextBlock Text="Scanee producto"
+                                   FontSize="12"
+                                   Margin="2,0,0,4"
+                                   Foreground="{DynamicResource MaterialDesignBody}"/>
+                        <Border Height="{StaticResource CtlHeight}"
+                                Background="{DynamicResource MaterialDesignCardBackground}"
+                                CornerRadius="3"
+                                HorizontalAlignment="Stretch">
+                            <TextBlock x:Name="lblProductoNombre"
+                                       Margin="10,0"
+                                       VerticalAlignment="Center"
+                                       FontSize="{StaticResource CtlFontSize}"
+                                       TextTrimming="CharacterEllipsis"/>
+                        </Border>
+                        <!-- Oculto: soporte para ingreso manual si se usa -->
+                        <TextBox x:Name="txtCodigoCompra"
+                                 Visibility="Collapsed"
+                                 KeyDown="TxtCodigoCompra_KeyDown"/>
+                    </StackPanel>
+
+                    <!-- Producto (oculto) -->
+                    <StackPanel Grid.Column="0" Margin="0,0,8,0" Visibility="Collapsed">
                         <TextBlock Text="Producto" FontSize="12" Margin="2,0,0,4"
                                    Foreground="{DynamicResource MaterialDesignBody}"/>
                         <ComboBox x:Name="cmbProducto"
                                   Height="{StaticResource CtlHeight}"
                                   FontSize="{StaticResource CtlFontSize}"
                                   Padding="8,0"
+                                  Loaded="cmbProducto_Loaded"
+                                  IsEditable="True"
+                                  IsTextSearchEnabled="False"
+                                  StaysOpenOnEdit="True"
+                                  TextSearch.TextPath="Nombre"
+                                  ItemTemplate="{StaticResource ProductoItemTemplate}"
                                   SelectionChanged="cmbProducto_SelectionChanged"/>
                     </StackPanel>
 
@@ -161,7 +200,7 @@
                     </Button>
 
                     <!-- Cantidad -->
-                    <StackPanel Grid.Column="2" Margin="0,0,8,0">
+                    <StackPanel Grid.Column="2" Margin="0,0,8,0" VerticalAlignment="Top">
                         <TextBlock Text="Cantidad" FontSize="12" Margin="2,0,0,4"
                                    Foreground="{DynamicResource MaterialDesignBody}"/>
                         <TextBox x:Name="txtCantidad"
@@ -171,11 +210,13 @@
                                  VerticalContentAlignment="Center"
                                  HorizontalContentAlignment="Right"
                                  PreviewTextInput="OnCantidadPreviewTextInput"
-                                 materialDesign:HintAssist.HelperText="Entero > 0"/>
+                                 PreviewKeyDown="OnCantidadPreviewKeyDown"
+                                 MaxLength="5"
+                                 materialDesign:HintAssist.HelperText="Entero > 0 (por defecto 1)"/>
                     </StackPanel>
 
                     <!-- Precio Unitario -->
-                    <StackPanel Grid.Column="3" Margin="0,0,8,0">
+                    <StackPanel Grid.Column="3" Margin="0,0,8,0" VerticalAlignment="Top">
                         <TextBlock Text="Precio unitario (S/)" FontSize="12" Margin="2,0,0,4"
                                    Foreground="{DynamicResource MaterialDesignBody}"/>
                         <Grid>
@@ -222,10 +263,8 @@
                             <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
                                 <Setter Property="IsEnabled" Value="True"/>
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding SelectedItem, ElementName=cmbProducto}" Value="{x:Null}">
-                                        <Setter Property="IsEnabled" Value="False"/>
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding Text.Length, ElementName=txtCantidad}" Value="0">
+                                    <!-- Usar SelectedValue en lugar de SelectedItem -->
+                                    <DataTrigger Binding="{Binding SelectedValue, ElementName=cmbProducto}" Value="{x:Null}">
                                         <Setter Property="IsEnabled" Value="False"/>
                                     </DataTrigger>
                                     <DataTrigger Binding="{Binding Text.Length, ElementName=txtPrecioUnitario}" Value="0">
@@ -288,14 +327,27 @@
                              FontWeight="SemiBold"/>
                 </StackPanel>
 
-                <Button x:Name="btnRegistrar"
-                        Margin="0,0,8,0"
-                        Padding="{StaticResource CtlPadding}"
-                        MinHeight="{StaticResource CtlHeight}"
-                        FontSize="{StaticResource CtlFontSize}"
-                        Background="{StaticResource BrushBtnPrimary}"
-                        Foreground="White"
-                        Click="btnRegistrar_Click">
+                <Button x:Name="btnHistorialCompras" Margin="0,0,8,0" Padding="{StaticResource CtlPadding}" MinHeight="{StaticResource CtlHeight}" FontSize="{StaticResource CtlFontSize}" Background="{StaticResource BrushBtnAccent}" Foreground="White" Click="btnHistorialCompras_Click">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}"/>
+                    </Button.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE81C;" Margin="0,0,6,0"/>
+                        <TextBlock Text="Historial"/>
+                    </StackPanel>
+                </Button>
+
+                <Button x:Name="btnCerrar" Margin="0,0,8,0" Padding="{StaticResource CtlPadding}" MinHeight="{StaticResource CtlHeight}" FontSize="{StaticResource CtlFontSize}" Background="{StaticResource BrushBtnDanger}" Foreground="White" Click="btnCerrar_Click">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}"/>
+                    </Button.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8BB;" Margin="0,0,6,0"/>
+                        <TextBlock Text="Cerrar"/>
+                    </StackPanel>
+                </Button>
+
+                <Button x:Name="btnRegistrar" Padding="{StaticResource CtlPadding}" MinHeight="{StaticResource CtlHeight}" FontSize="{StaticResource CtlFontSize}" Background="{StaticResource BrushBtnPrimary}" Foreground="White" Click="btnRegistrar_Click">
                     <Button.Style>
                         <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
                             <Setter Property="IsEnabled" Value="True"/>
@@ -317,43 +369,17 @@
                         <TextBlock Text="Registrar"/>
                     </StackPanel>
                 </Button>
-
-                <Button x:Name="btnHistorialCompras"
-                        Margin="0,0,8,0"
-                        Padding="{StaticResource CtlPadding}"
-                        MinHeight="{StaticResource CtlHeight}"
-                        FontSize="{StaticResource CtlFontSize}"
-                        Background="{StaticResource BrushBtnAccent}"
-                        Foreground="White"
-                        Click="btnHistorialCompras_Click">
-                    <Button.Style>
-                        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}"/>
-                    </Button.Style>
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE81C;" Margin="0,0,6,0"/>
-                        <TextBlock Text="Historial"/>
-                    </StackPanel>
-                </Button>
-
-                <Button x:Name="btnCerrar"
-                        Padding="{StaticResource CtlPadding}"
-                        MinHeight="{StaticResource CtlHeight}"
-                        FontSize="{StaticResource CtlFontSize}"
-                        Background="{StaticResource BrushBtnDanger}"
-                        Foreground="White"
-                        Click="btnCerrar_Click">
-                    <Button.Style>
-                        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}"/>
-                    </Button.Style>
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8BB;" Margin="0,0,6,0"/>
-                        <TextBlock Text="Cerrar"/>
-                    </StackPanel>
-                </Button>
             </StackPanel>
         </DockPanel>
 
-        <!-- Overlay edición precios -->
+        <!-- Snackbar -->
+        <materialDesign:Snackbar x:Name="snackbar"
+                                 Grid.RowSpan="4"
+                                 HorizontalAlignment="Left"
+                                 VerticalAlignment="Bottom"
+                                 Margin="12"/>
+
+        <!-- Overlay edición precios (sin cambios) -->
         <Grid x:Name="panelEditorPrecios"
               Grid.RowSpan="4"
               Visibility="Collapsed"

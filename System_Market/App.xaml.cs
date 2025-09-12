@@ -4,6 +4,7 @@ using System.Windows;
 using System_Market.Data;
 using System.Configuration;
 using System.Data;
+using System_Market.Services; // <-- agregar
 
 namespace System_Market;
 
@@ -32,6 +33,9 @@ public partial class App : Application
 
         // Llamamos al inicializador para crear carpeta + DB + tablas
         DatabaseInitializer.InitializeDatabase();
+
+        // Iniciar el hook del lector al arrancar la app
+        BarcodeScannerService.Start();
     }
 }
 

@@ -5,6 +5,8 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
+using MaterialDesignThemes.Wpf; // <- agregado
 using System_Market.Data;
 using System_Market.Models;
 using System_Market.Services;
@@ -21,6 +23,13 @@ namespace System_Market.Views
         private ObservableCollection<DetalleVenta> detalleVenta;
 
         private int usuarioId = 1; // TODO: Cambiar por el usuario logueado
+        private bool _codigoBloqueado; // única declaración
+
+        // Longitud mínima para aceptar una entrada manual (evita residuos como "7")
+        private const int MinManualCodeLength = 3;
+
+        // Cola para Snackbar (2s)
+        private readonly SnackbarMessageQueue _snackbarQueue = new(TimeSpan.FromSeconds(2));
 
         public VentaWindow()
         {
@@ -30,29 +39,96 @@ namespace System_Market.Views
             detalleVenta = new ObservableCollection<DetalleVenta>();
             dgDetalleVenta.ItemsSource = detalleVenta;
             ActualizarTotales();
+
+            // Enlaza la cola al Snackbar del XAML
+            snackbar.MessageQueue = _snackbarQueue;
+
+            // Por defecto: bloquear edición manual. El lector funcionará igual.
+            BloquearEdicionCodigo();
+            txtCodigoBarra.Clear();
+        }
+
+        // Constructor con código (bloquea caja y agrega automáticamente)
+        public VentaWindow(string codigoInicial, bool bloquearCodigo = true) : this()
+        {
+            if (!string.IsNullOrWhiteSpace(codigoInicial))
+            {
+                _codigoBloqueado = bloquearCodigo;
+                if (_codigoBloqueado)
+                    BloquearEdicionCodigo();
+
+                // Agregar el primer ítem (sin mensajes)
+                AgregarProductoDesdeCodigo(codigoInicial.Trim(), mostrarMensajes: false);
+                // Evitar residuo visual
+                txtCodigoBarra.Clear();
+            }
+        }
+
+        // Invocado por el lector cuando esta ventana está activa
+        public void HandleScannedCode(string codigo)
+        {
+            // Muestra el código leído (solo esta lectura) y no dejes residuo
+            txtCodigoBarra.Text = codigo;
+            txtCodigoBarra.CaretIndex = codigo.Length;
+
+            AgregarProductoDesdeCodigo(codigo.Trim(), mostrarMensajes: false);
+
+            // Limpia para evitar acumulación visual
+            txtCodigoBarra.Clear();
         }
 
         private void txtCodigoBarra_KeyDown(object sender, KeyEventArgs e)
         {
+            if (_codigoBloqueado) return;
             if (e.Key == Key.Enter)
             {
+                var manual = (txtCodigoBarra.Text ?? string.Empty).Trim();
+                if (manual.Length < MinManualCodeLength) return;
                 btnAgregarProducto_Click(sender, e);
             }
         }
 
+        // Bloquea entrada de texto cuando está en modo lector (evita el “7”)
+        private void TxtCodigoBarra_PreviewTextInput(object sender, TextCompositionEventArgs e)
+        {
+            if (_codigoBloqueado) e.Handled = true;
+        }
+
+        private void TxtCodigoBarra_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (_codigoBloqueado && EsTeclaDigito(e.Key)) e.Handled = true;
+        }
+
+        private static bool EsTeclaDigito(Key k) =>
+            (k >= Key.D0 && k <= Key.D9 && !Keyboard.IsKeyDown(Key.LeftShift) && !Keyboard.IsKeyDown(Key.RightShift))
+            || (k >= Key.NumPad0 && k <= Key.NumPad9);
+
         private void btnAgregarProducto_Click(object sender, RoutedEventArgs e)
         {
-            string codigo = txtCodigoBarra.Text.Trim();
-            if (string.IsNullOrEmpty(codigo))
+            var code = (txtCodigoBarra.Text ?? string.Empty).Trim();
+            if (code.Length < MinManualCodeLength)
             {
-                MessageBox.Show("Ingrese un código de barras válido.");
+                txtCodigoBarra.Focus();
+                txtCodigoBarra.SelectAll();
                 return;
             }
+            AgregarProductoDesdeCodigo(code, mostrarMensajes: true);
+        }
 
+        private void AgregarProductoDesdeCodigo(string codigo, bool mostrarMensajes)
+        {
             var producto = productoService.ObtenerPorCodigoBarras(codigo);
             if (producto == null)
             {
-                MessageBox.Show("Producto no encontrado.");
+                if (mostrarMensajes)
+                {
+                    MessageBox.Show("Producto no encontrado.", "Información",
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                else
+                {
+                    _snackbarQueue.Enqueue("Producto no encontrado.");
+                }
                 return;
             }
 
@@ -61,7 +137,16 @@ namespace System_Market.Views
 
             if (cantidadSolicitada > producto.Stock)
             {
-                MessageBox.Show($"No hay suficiente stock para '{producto.Nombre}'. Stock disponible: {producto.Stock}, solicitado: {cantidadSolicitada}", "Stock insuficiente", MessageBoxButton.OK, MessageBoxImage.Warning);
+                var msg = $"Stock insuficiente para '{producto.Nombre}'. Disponible: {producto.Stock}";
+                if (mostrarMensajes)
+                {
+                    MessageBox.Show(msg, "Stock insuficiente",
+                        MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+                else
+                {
+                    _snackbarQueue.Enqueue(msg);
+                }
                 return;
             }
 
@@ -84,27 +169,29 @@ namespace System_Market.Views
 
             dgDetalleVenta.Items.Refresh();
             ActualizarTotales();
-            txtCodigoBarra.Clear();
-            txtCodigoBarra.Focus();
+
+            if (!_codigoBloqueado)
+            {
+                txtCodigoBarra.Clear();
+                txtCodigoBarra.Focus();
+            }
         }
 
-        // NUEVO: aumentar cantidad (+)
         private void btnAumentarCantidad_Click(object sender, RoutedEventArgs e)
         {
             if ((sender as Button)?.CommandParameter is DetalleVenta det)
             {
-                // Validar stock actual antes de aumentar
                 var producto = productoService.ObtenerTodos().FirstOrDefault(p => p.Id == det.ProductoId);
                 if (producto == null)
                 {
-                    MessageBox.Show($"Producto no encontrado (ID: {det.ProductoId}).");
+                    _snackbarQueue.Enqueue($"Producto no encontrado (ID: {det.ProductoId}).");
                     return;
                 }
 
                 int nuevaCantidad = det.Cantidad + 1;
                 if (nuevaCantidad > producto.Stock)
                 {
-                    MessageBox.Show($"Stock insuficiente para '{producto.Nombre}'. Disponible: {producto.Stock}", "Stock insuficiente", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    _snackbarQueue.Enqueue($"Stock insuficiente para '{producto.Nombre}'. Disponible: {producto.Stock}");
                     return;
                 }
 
@@ -116,7 +203,6 @@ namespace System_Market.Views
             }
         }
 
-        // NUEVO: disminuir cantidad (-). Si llega a 0, elimina el ítem
         private void btnDisminuirCantidad_Click(object sender, RoutedEventArgs e)
         {
             if ((sender as Button)?.CommandParameter is DetalleVenta det)
@@ -128,7 +214,6 @@ namespace System_Market.Views
                 }
                 else
                 {
-                    // Cantidad = 1 y se presiona disminuir: remover
                     detalleVenta.Remove(det);
                 }
 
@@ -137,7 +222,6 @@ namespace System_Market.Views
             }
         }
 
-        // Eliminar con tecla Supr (opcional, se mantiene)
         private void dgDetalleVenta_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Delete && dgDetalleVenta.SelectedItem is DetalleVenta seleccionado)
@@ -156,18 +240,18 @@ namespace System_Market.Views
                 return;
             }
 
-            // Validar stock de todos los productos antes de registrar la venta
-            foreach (var detalle in detalleVenta)
+            foreach (var det in detalleVenta)
             {
-                var producto = productoService.ObtenerTodos().FirstOrDefault(p => p.Id == detalle.ProductoId);
+                var producto = productoService.ObtenerTodos().FirstOrDefault(p => p.Id == det.ProductoId);
                 if (producto == null)
                 {
-                    MessageBox.Show($"Producto no encontrado (ID: {detalle.ProductoId}).");
+                    MessageBox.Show($"Producto no encontrado (ID: {det.ProductoId}).");
                     return;
                 }
-                if (detalle.Cantidad > producto.Stock)
+                if (det.Cantidad > producto.Stock)
                 {
-                    MessageBox.Show($"No hay suficiente stock para '{producto.Nombre}'. Stock disponible: {producto.Stock}, solicitado: {detalle.Cantidad}", "Stock insuficiente", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show($"Stock insuficiente para '{producto.Nombre}'. Disponible: {producto.Stock}, solicitado: {det.Cantidad}",
+                        "Stock insuficiente", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
             }
@@ -186,6 +270,9 @@ namespace System_Market.Views
                 MessageBox.Show($"Venta registrada correctamente (ID: {ventaId}).");
                 detalleVenta.Clear();
                 ActualizarTotales();
+
+                if (!_codigoBloqueado)
+                    txtCodigoBarra.Focus();
             }
             catch (InvalidOperationException ex)
             {
@@ -209,18 +296,37 @@ namespace System_Market.Views
             historial.ShowDialog();
         }
 
-        // Obsoleto si ya no usas el botón Eliminar en la grilla, se deja por compatibilidad
-        private void btnEliminarProducto_Click(object sender, RoutedEventArgs e)
+        // Botón/tecla para permitir escribir un código manual (SKU interno)
+        private void BtnDesbloquearCodigo_Click(object sender, RoutedEventArgs e) => DesbloquearEdicionCodigo();
+
+        private void BloquearEdicionCodigo()
         {
-            var btn = sender as Button;
-            int productoId = int.Parse(btn!.Tag.ToString()!);
-            var item = detalleVenta.FirstOrDefault(d => d.ProductoId == productoId);
-            if (item != null)
+            _codigoBloqueado = true;
+            txtCodigoBarra.IsReadOnly = true;
+            txtCodigoBarra.Background = new SolidColorBrush(Color.FromRgb(235, 235, 235));
+            txtCodigoBarra.Cursor = Cursors.Arrow;
+            txtCodigoBarra.ToolTip = "F2 o 'Editar' para escribir un código manual.";
+        }
+
+        private void DesbloquearEdicionCodigo()
+        {
+            _codigoBloqueado = false;
+            txtCodigoBarra.IsReadOnly = false;
+            txtCodigoBarra.ClearValue(TextBox.BackgroundProperty);
+            txtCodigoBarra.Cursor = Cursors.IBeam;
+            txtCodigoBarra.ToolTip = null;
+            txtCodigoBarra.Focus();
+            txtCodigoBarra.SelectAll();
+        }
+
+        protected override void OnPreviewKeyDown(KeyEventArgs e)
+        {
+            if (e.Key == Key.F2)
             {
-                detalleVenta.Remove(item);
-                dgDetalleVenta.Items.Refresh();
-                ActualizarTotales();
+                DesbloquearEdicionCodigo();
+                e.Handled = true;
             }
+            base.OnPreviewKeyDown(e);
         }
     }
-}       
+}

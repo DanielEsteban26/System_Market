@@ -19,18 +19,25 @@
             <Setter Property="TextAlignment" Value="Right"/>
             <Setter Property="HorizontalAlignment" Value="Stretch"/>
         </Style>
+
+        <!-- Estilo para el botón F2: Editar (outlined) -->
+        <Style x:Key="ButtonEditOutlined" TargetType="Button" BasedOn="{StaticResource MaterialDesignOutlinedButton}">
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryHueMidBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource PrimaryHueMidBrush}"/>
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="MinWidth" Value="110"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="Margin" Value="8,0,0,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
     </Window.Resources>
 
     <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <!-- Header -->
             <RowDefinition Height="Auto"/>
-            <!-- Buscar -->
             <RowDefinition Height="*"/>
-            <!-- Grilla -->
             <RowDefinition Height="Auto"/>
-            <!-- Pie -->
         </Grid.RowDefinitions>
 
         <!-- Encabezado -->
@@ -51,7 +58,8 @@
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="260"/>
+                    <!-- Antes era 260: ahora Auto para no recortar el botón -->
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
@@ -59,14 +67,29 @@
                 <TextBlock Grid.Column="0" Text="Código de barras" VerticalAlignment="Center"
                            Margin="0,0,8,0" Foreground="{DynamicResource MaterialDesignBody}"/>
 
-                <TextBox x:Name="txtCodigoBarra"
-                         Grid.Column="1"
-                         Height="36"
-                         Padding="10,0"
-                         VerticalContentAlignment="Center"
-                         Margin="0,0,8,0"
-                         KeyDown="txtCodigoBarra_KeyDown"
-                         materialDesign:HintAssist.Hint="Ingrese o escanee el código"/>
+                <StackPanel Orientation="Horizontal" Grid.Column="1">
+                    <TextBox x:Name="txtCodigoBarra"
+                             Width="220"
+                             PreviewTextInput="TxtCodigoBarra_PreviewTextInput"
+                             PreviewKeyDown="TxtCodigoBarra_PreviewKeyDown"
+                             Height="36"
+                             Padding="10,0"
+                             VerticalContentAlignment="Center"
+                             Margin="0,0,8,0"
+                             KeyDown="txtCodigoBarra_KeyDown"
+                             materialDesign:HintAssist.Hint="Ingrese o escanee el código"/>
+
+                    <!-- Botón F2: Editar con estilo outlined -->
+                    <Button x:Name="btnEditarCodigo"
+                            Click="BtnDesbloquearCodigo_Click"
+                            Style="{StaticResource ButtonEditOutlined}"
+                            ToolTip="Permite escribir un código interno manualmente (o presiona F2)">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE70F;" Margin="0,0,6,0"/>
+                            <TextBlock Text="F2: Editar"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
 
                 <Button Grid.Column="2"
                         Padding="14,6"
@@ -134,7 +157,6 @@
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                    <!-- Disminuir -->
                                     <Button Padding="10,4"
                                             Margin="0,0,6,0"
                                             Background="{StaticResource BrushBtnDanger}"
@@ -150,7 +172,6 @@
                                         </StackPanel>
                                     </Button>
 
-                                    <!-- Aumentar -->
                                     <Button Padding="10,4"
                                             Background="{StaticResource BrushBtnPrimary}"
                                             Foreground="White"
@@ -197,5 +218,11 @@
                 </Button>
             </StackPanel>
         </DockPanel>
+
+        <!-- Snackbar -->
+        <materialDesign:Snackbar x:Name="snackbar"
+                                 HorizontalAlignment="Right"
+                                 VerticalAlignment="Bottom"
+                                 Margin="16"/>
     </Grid>
 </Window>

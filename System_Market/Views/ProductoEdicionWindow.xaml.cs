@@ -1,4 +1,5 @@
 ﻿using System.Windows;
+using System.Windows.Media;
 using System_Market.Models;
 using System_Market.Services;
 
@@ -9,12 +10,17 @@ namespace System_Market.Views
         public Producto Producto { get; private set; }
         private readonly CategoriaService _categoriaService;
         private readonly ProveedorService _proveedorService;
+        private readonly bool _codigoBloqueado;
 
-        public ProductoEdicionWindow(string connectionString, Producto producto = null)
+        public ProductoEdicionWindow(string connectionString,
+                                     Producto producto = null,
+                                     string codigoPrefill = null,
+                                     bool bloquearCodigo = false)
         {
             InitializeComponent();
             _categoriaService = new CategoriaService(connectionString);
             _proveedorService = new ProveedorService(connectionString);
+            _codigoBloqueado = bloquearCodigo;
 
             cbCategoria.ItemsSource = _categoriaService.ObtenerTodas();
             cbProveedor.ItemsSource = _proveedorService.ObtenerTodos();
@@ -34,7 +40,20 @@ namespace System_Market.Views
             else
             {
                 Title = "Agregar Producto";
+                if (!string.IsNullOrWhiteSpace(codigoPrefill))
+                {
+                    txtCodigoBarras.Text = codigoPrefill.Trim();
+                    if (_codigoBloqueado) BloquearCodigo();
+                }
             }
+        }
+
+        private void BloquearCodigo()
+        {
+            txtCodigoBarras.IsReadOnly = true;
+            txtCodigoBarras.Background = new SolidColorBrush(Color.FromRgb(235, 235, 235));
+            txtCodigoBarras.Cursor = System.Windows.Input.Cursors.Arrow;
+            txtCodigoBarras.ToolTip = "Código fijado por lectura (no editable).";
         }
 
         private void BtnGuardar_Click(object sender, RoutedEventArgs e)
@@ -47,7 +66,8 @@ namespace System_Market.Views
                 !decimal.TryParse(txtPrecioVenta.Text, out decimal precioVenta) ||
                 !int.TryParse(txtStock.Text, out int stock))
             {
-                MessageBox.Show("Complete todos los campos correctamente.", "Aviso", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Complete todos los campos correctamente.", "Aviso",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -62,16 +82,14 @@ namespace System_Market.Views
 
             if (Producto.Stock < 0)
             {
-                MessageBox.Show("El stock no puede ser negativo.", "Aviso", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("El stock no puede ser negativo.", "Aviso",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             DialogResult = true;
         }
 
-        private void BtnCancelar_Click(object sender, RoutedEventArgs e)
-        {
-            DialogResult = false;
-        }
+        private void BtnCancelar_Click(object sender, RoutedEventArgs e) => DialogResult = false;
     }
 }

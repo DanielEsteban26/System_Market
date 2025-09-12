@@ -6,6 +6,8 @@ using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.ComponentModel;
+using MaterialDesignThemes.Wpf; // Snackbar
 using System_Market.Data;
 using System_Market.Models;
 using System_Market.Services;
@@ -15,38 +17,118 @@ namespace System_Market.Views
     public partial class CompraWindow : Window
     {
         private readonly CompraService _compraService;
-        private readonly ProveedorService _proveedor_service;
+        private readonly ProveedorService _proveedorService;
         private readonly ProductoService _productoService;
 
         private readonly List<DetalleCompra> _detalles = new();
+
+        private List<Producto> _productos = new();
+        private ICollectionView? _vistaProductos;
 
         private const string Simbolo = "S/";
         private static readonly Regex RegexEntero = new(@"^[0-9]+$", RegexOptions.Compiled);
         private static readonly Regex RegexDecimal = new(@"^[0-9\.,]+$", RegexOptions.Compiled);
 
+        private readonly SnackbarMessageQueue _snackbarQueue = new(TimeSpan.FromSeconds(3));
+
+        private DateTime _lastScanHandled = DateTime.MinValue;
+        private string? _ultimoCodigoEscaneado; // para prellenar al crear producto
+
         public CompraWindow()
         {
             InitializeComponent();
 
+            snackbar.MessageQueue = _snackbarQueue;
+
             string conn = DatabaseInitializer.GetConnectionString();
             _compraService = new CompraService(conn);
-            _proveedor_service = new ProveedorService(conn);
+            _proveedorService = new ProveedorService(conn);
             _productoService = new ProductoService(conn);
 
             CargarCombos();
         }
 
+        public CompraWindow(string codigoInicial) : this()
+        {
+            if (!string.IsNullOrWhiteSpace(codigoInicial))
+                PreSeleccionarProductoPorCodigo(codigoInicial);
+        }
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            // No enfocamos el textbox de código (está oculto). El gancho del escáner funciona igual.
+            this.Focus();
+        }
+
+        private void PreSeleccionarProductoPorCodigo(string codigo)
+        {
+            _ultimoCodigoEscaneado = codigo;
+
+            var prod = _productoService.ObtenerPorCodigoBarras(codigo);
+            if (prod != null)
+            {
+                cmbProducto.SelectedValue = prod.Id;
+                txtPrecioUnitario.Text = prod.PrecioCompra.ToString("0.00");
+                lblProductoNombre.Text = prod.Nombre;
+
+                txtCantidad.Text = "1";
+                txtCantidad.SelectAll();
+                txtCantidad.Focus();
+                _lastScanHandled = DateTime.UtcNow;
+            }
+            else
+            {
+                MostrarToast($"El producto con código {codigo} no existe. Usa 'Nuevo' para crearlo.");
+                cmbProducto.SelectedIndex = -1;
+                lblProductoNombre.Text = "";
+                txtPrecioUnitario.Clear();
+                btnProductoNuevo.Focus();
+            }
+        }
+
         private void CargarCombos()
         {
-            var proveedores = _proveedor_service.ObtenerTodos();
+            var proveedores = _proveedorService.ObtenerTodos();
             cmbProveedor.ItemsSource = proveedores;
             cmbProveedor.DisplayMemberPath = "Nombre";
             cmbProveedor.SelectedValuePath = "Id";
 
-            var productos = _productoService.ObtenerTodos();
-            cmbProducto.ItemsSource = productos;
-            cmbProducto.DisplayMemberPath = "Nombre";
+            _productos = _productoService.ObtenerTodos();
+            _vistaProductos = System.Windows.Data.CollectionViewSource.GetDefaultView(_productos);
+            _vistaProductos.Filter = null;
+
+            cmbProducto.ItemsSource = _vistaProductos;
             cmbProducto.SelectedValuePath = "Id";
+        }
+
+        private void cmbProducto_Loaded(object sender, RoutedEventArgs e)
+        {
+            // si el template tiene el EditableTextBox
+            if (cmbProducto.Template.FindName("PART_EditableTextBox", cmbProducto) is TextBox tb)
+                tb.TextChanged += CmbProducto_TextChanged;
+        }
+
+        private void CmbProducto_TextChanged(object? sender, TextChangedEventArgs e)
+        {
+            if (_vistaProductos == null) return;
+            string txt = (sender as TextBox)?.Text?.Trim() ?? string.Empty;
+
+            if (string.IsNullOrEmpty(txt))
+            {
+                _vistaProductos.Filter = null;
+            }
+            else
+            {
+                _vistaProductos.Filter = o =>
+                {
+                    if (o is not Producto p) return false;
+                    return p.Nombre.Contains(txt, StringComparison.OrdinalIgnoreCase)
+                           || (p.CodigoBarras?.Contains(txt, StringComparison.OrdinalIgnoreCase) ?? false);
+                };
+            }
+
+            _vistaProductos.Refresh();
+            cmbProducto.IsDropDownOpen = true;
         }
 
         private void btnAgregarDetalle_Click(object sender, RoutedEventArgs e)
@@ -57,7 +139,9 @@ namespace System_Market.Views
                 return;
             }
 
-            if (!int.TryParse(txtCantidad.Text.Trim(), out int cantidad) || cantidad <= 0)
+            int cantidad = 1;
+            var txtCant = txtCantidad.Text.Trim();
+            if (!string.IsNullOrEmpty(txtCant) && (!int.TryParse(txtCant, out cantidad) || cantidad <= 0))
             {
                 MessageBox.Show("Ingrese una cantidad válida.", "Aviso", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
@@ -94,6 +178,7 @@ namespace System_Market.Views
             CalcularTotal();
 
             cmbProducto.SelectedIndex = -1;
+            lblProductoNombre.Text = "";
             txtCantidad.Clear();
             txtPrecioUnitario.Clear();
             OcultarEditorPrecios();
@@ -129,7 +214,7 @@ namespace System_Market.Views
             {
                 var compra = new Compra
                 {
-                    UsuarioId = 1, // TODO: reemplazar por usuario logueado
+                    UsuarioId = 1,
                     ProveedorId = Convert.ToInt32(cmbProveedor.SelectedValue),
                     Fecha = DateTime.Now,
                     Total = _detalles.Sum(d => d.Subtotal),
@@ -167,16 +252,16 @@ namespace System_Market.Views
             var producto = cmbProducto.SelectedItem as Producto;
             if (producto != null)
             {
+                cmbProducto.Text = producto.Nombre;
+                lblProductoNombre.Text = producto.Nombre;
                 txtPrecioUnitario.Text = producto.PrecioCompra.ToString("0.00");
-                if (panelEditorPrecios.Visibility == Visibility.Visible)
-                {
-                    txtNuevoPrecioCompra.Text = producto.PrecioCompra.ToString("0.00");
-                    txtNuevoPrecioVenta.Text = producto.PrecioVenta.ToString("0.00");
-                    lblProductoOverlay.Text = producto.Nombre;
-                }
+
+                txtCantidad.Text = "1";
+                txtCantidad.SelectAll();
             }
             else
             {
+                lblProductoNombre.Text = "";
                 txtPrecioUnitario.Clear();
                 OcultarEditorPrecios();
             }
@@ -184,15 +269,29 @@ namespace System_Market.Views
 
         private void btnProductoNuevo_Click(object sender, RoutedEventArgs e)
         {
-            var win = new ProductoEdicionWindow(DatabaseInitializer.GetConnectionString());
+            var win = new ProductoEdicionWindow(
+                DatabaseInitializer.GetConnectionString(),
+                producto: null,
+                codigoPrefill: _ultimoCodigoEscaneado,
+                bloquearCodigo: false);
+
             if (win.ShowDialog() == true)
             {
                 _productoService.AgregarProducto(win.Producto);
-                var productos = _productoService.ObtenerTodos();
-                cmbProducto.ItemsSource = productos;
-                cmbProducto.DisplayMemberPath = "Nombre";
+
+                // Recargar productos
+                _productos = _productoService.ObtenerTodos();
+                _vistaProductos = System.Windows.Data.CollectionViewSource.GetDefaultView(_productos);
+                _vistaProductos.Filter = null;
+                cmbProducto.ItemsSource = _vistaProductos;
                 cmbProducto.SelectedValuePath = "Id";
-                cmbProducto.SelectedIndex = productos.Count - 1;
+
+                // Forzar selección por Id
+                SeleccionarProductoPorId(win.Producto.Id);
+
+                txtCantidad.Text = "1";
+                txtCantidad.SelectAll();
+                txtCantidad.Focus();
             }
         }
 
@@ -264,7 +363,6 @@ namespace System_Market.Views
 
         private void OcultarEditorPrecios() => panelEditorPrecios.Visibility = Visibility.Collapsed;
 
-        // Parser robusto (coma / punto, con o sin 'S/')
         private static bool TryParsePrecio(string? texto, out decimal valor)
         {
             valor = 0m;
@@ -281,16 +379,27 @@ namespace System_Market.Views
             return false;
         }
 
-        #region Validaciones Input
         private void OnCantidadPreviewTextInput(object sender, TextCompositionEventArgs e)
         {
+            if ((DateTime.UtcNow - _lastScanHandled).TotalMilliseconds < 250)
+            {
+                e.Handled = true;
+                return;
+            }
             e.Handled = !RegexEntero.IsMatch(e.Text);
         }
 
-        private void Decimal_PreviewTextInput(object sender, TextCompositionEventArgs e)
+        private void OnCantidadPreviewKeyDown(object sender, KeyEventArgs e)
         {
-            e.Handled = !RegexDecimal.IsMatch(e.Text);
+            if ((DateTime.UtcNow - _lastScanHandled).TotalMilliseconds < 250)
+            {
+                e.Handled = true;
+                return;
+            }
         }
+
+        private void Decimal_PreviewTextInput(object sender, TextCompositionEventArgs e)
+            => e.Handled = !RegexDecimal.IsMatch(e.Text);
 
         private void Decimal_LostFocus(object sender, RoutedEventArgs e)
         {
@@ -300,6 +409,80 @@ namespace System_Market.Views
             else
                 tb.Text = v.ToString("0.00");
         }
-        #endregion
+
+        // Recibido desde el hook de escáner
+        public void HandleScannedCode(string codigo)
+        {
+            _ultimoCodigoEscaneado = codigo;
+            var prod = _productoService.ObtenerPorCodigoBarras(codigo);
+            if (prod == null)
+            {
+                MostrarToast($"El producto con código {codigo} no existe. Usa 'Nuevo' para crearlo.");
+                cmbProducto.SelectedIndex = -1;
+                lblProductoNombre.Text = "";
+                txtPrecioUnitario.Clear();
+                btnProductoNuevo.Focus();
+                return;
+            }
+
+            SeleccionarProductoPorId(prod.Id);
+            txtCantidad.Text = "1";
+            txtCantidad.SelectAll();
+            txtCantidad.Focus();
+            _lastScanHandled = DateTime.UtcNow;
+        }
+
+        // Si algún día usas ingreso manual (el control está oculto), esto sigue funcionando.
+        private void TxtCodigoCompra_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Enter) return;
+            var code = txtCodigoCompra.Text.Trim();
+            if (string.IsNullOrEmpty(code)) return;
+
+            _ultimoCodigoEscaneado = code;
+
+            var prod = _productoService.ObtenerPorCodigoBarras(code);
+            if (prod != null)
+            {
+                cmbProducto.SelectedValue = prod.Id;
+                lblProductoNombre.Text = prod.Nombre;
+                txtPrecioUnitario.Text = prod.PrecioCompra.ToString("0.00");
+
+                txtCantidad.Text = "1";
+                txtCantidad.SelectAll();
+                txtCantidad.Focus();
+                _lastScanHandled = DateTime.UtcNow;
+            }
+            else
+            {
+                MostrarToast($"El producto con código {code} no existe. Usa 'Nuevo' para crearlo.");
+                cmbProducto.SelectedIndex = -1;
+                lblProductoNombre.Text = "";
+                txtPrecioUnitario.Clear();
+                btnProductoNuevo.Focus();
+            }
+        }
+
+        private void MostrarToast(string mensaje) => _snackbarQueue.Enqueue(mensaje);
+
+        private void SeleccionarProductoPorId(int productoId)
+        {
+            // Busca en la lista actual
+            var prod = _productos.FirstOrDefault(p => p.Id == productoId);
+            if (prod != null)
+            {
+                // Establece SelectedItem directamente
+                cmbProducto.SelectedItem = prod;
+                // Redundancia: también SelectedValue
+                cmbProducto.SelectedValue = prod.Id;
+
+                lblProductoNombre.Text = prod.Nombre;
+                txtPrecioUnitario.Text = prod.PrecioCompra.ToString("0.00");
+
+                // Valor por defecto cantidad
+                if (string.IsNullOrWhiteSpace(txtCantidad.Text))
+                    txtCantidad.Text = "1";
+            }
+        }
     }
 }
