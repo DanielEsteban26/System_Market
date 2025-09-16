@@ -1,0 +1,64 @@
+<Window x:Class="System_Market.Views.AboutWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Acerca de" Height="460" Width="570" WindowStartupLocation="CenterOwner" ResizeMode="NoResize">
+    <Grid Background="#232F3B" Margin="0">
+        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="400">
+            <TextBlock Text="Sistema Minimarket" FontSize="22" FontWeight="Bold" Foreground="#90CAF9" Margin="0,0,0,6" TextAlignment="Center"/>
+            <TextBlock x:Name="txtVersion" Text="Versión 1.0.0" FontSize="13" Foreground="#B0BEC5" Margin="0,0,0,8" TextAlignment="Center"/>
+            <Separator Margin="0,0,0,8"/>
+            <TextBlock Text="Aplicación para la gestión de ventas, compras y stock en minimarkets."
+                       FontSize="13" Foreground="#B0BEC5" Margin="0,0,0,10" TextAlignment="Center" TextWrapping="Wrap"/>
+            <TextBlock Text="Desarrollado por:" FontSize="13" Foreground="#B0BEC5" Margin="0,0,0,2" TextAlignment="Center"/>
+            <TextBlock Text="Daniel Isidro" FontSize="15" FontWeight="SemiBold" Foreground="#E9F2F8" Margin="0,0,0,4" TextAlignment="Center"/>
+
+            <!-- Contacto -->
+            <TextBlock FontSize="12" Foreground="#B0BEC5" TextAlignment="Center">Contacto:</TextBlock>
+            <TextBlock Margin="0,0,0,8" TextAlignment="Center" Foreground="#90CAF9">
+                <Run FontFamily="Segoe UI Emoji" FontSize="14" Text="✉️ "/>
+                <Hyperlink NavigateUri="mailto:isidroesteban402@gmail.com" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#90CAF9">
+                    isidroesteban402@gmail.com
+                </Hyperlink>
+            </TextBlock>
+
+            <!-- Redes sociales / repos -->
+            <StackPanel Orientation="Vertical" HorizontalAlignment="Center" Margin="0,6,0,6">
+                <TextBlock Text="Redes &amp; Repositorio" FontSize="12" Foreground="#B0BEC5" TextAlignment="Center" Margin="0,0,0,6"/>
+
+                <WrapPanel HorizontalAlignment="Center" Margin="0,0,0,6">
+                    <TextBlock Margin="6,2" TextAlignment="Center" Foreground="#90CAF9">
+                        <Run FontFamily="Segoe UI Emoji" FontSize="14" Text="🐙 "/>
+                        <Hyperlink NavigateUri="https://github.com/DanielEsteban26" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#90CAF9">
+                            GitHub
+                        </Hyperlink>
+                    </TextBlock>
+
+                    <TextBlock Margin="6,2" TextAlignment="Center" Foreground="#90CAF9">
+                        <Run FontFamily="Segoe UI Emoji" FontSize="14" Text="💼 "/>
+                        <Hyperlink NavigateUri="https://www.linkedin.com/in/daniel-isidro-39a756219/" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#90CAF9">
+                            LinkedIn
+                        </Hyperlink>
+                    </TextBlock>
+
+                    
+                </WrapPanel>
+
+                <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+                    <TextBlock FontSize="12" Foreground="#B0BEC5" TextAlignment="Center" Margin="0,2,0,0">
+                        <Run FontFamily="Segoe UI Emoji" FontSize="14" Text="📁 "/>
+                        Repositorio:
+                        <Hyperlink NavigateUri="https://github.com/DanielEsteban26/System_Market" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#90CAF9">
+                            System_Market (GitHub)
+                        </Hyperlink>
+                    </TextBlock>
+
+                    
+                </StackPanel>
+            </StackPanel>
+
+            <Separator Margin="0,6,0,8"/>
+            <TextBlock Text="© 2025 Daniel Isidro. Todos los derechos reservados." FontSize="11" Foreground="#B0BEC5" TextAlignment="Center"/>
+            <Button Content="Cerrar" Width="90" Margin="0,14,0,0" Click="BtnCerrar_Click" HorizontalAlignment="Center"/>
+        </StackPanel>
+    </Grid>
+</Window>

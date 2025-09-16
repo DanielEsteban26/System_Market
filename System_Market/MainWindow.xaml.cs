@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data.SQLite;
+using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -11,6 +13,7 @@ using System.Windows.Controls;
 using System_Market.Data;
 using System_Market.Services;
 using System_Market.Views;
+using System_Market.Models;
 
 namespace System_Market
 {
@@ -22,7 +25,6 @@ namespace System_Market
         private readonly CompraService _compraService;
         private const int UMBRAL_STOCK_BAJO = 5;
 
-        // Acciones rápidas dinámicas
         private readonly ObservableCollection<QuickAction> _accionesRapidas = new();
         private readonly List<AccionDef> _catalogoAcciones = new()
         {
@@ -39,16 +41,15 @@ namespace System_Market
             new AccionDef("Dashboard", "Dashboard", "\uE9D5"),
         };
 
-        // Persistencia
         private string AccionesFilePath =>
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                          "System_Market", "quick_actions.json");
 
-        public MainWindow()
+        // Nuevo: constructor opcional que recibe el usuario logueado
+        public MainWindow(Usuario? usuario = null)
         {
             InitializeComponent();
-
-            BarcodeScannerService.Start(); // inicia hook global del lector
+            Debug.WriteLine("MainWindow.ctor");
 
             _conn = DatabaseInitializer.GetConnectionString();
             _productoService = new ProductoService(_conn);
@@ -59,23 +60,42 @@ namespace System_Market
             icQuickActions.ItemsSource = _accionesRapidas;
             cbAccion.ItemsSource = _catalogoAcciones;
 
-            // Cargar acciones guardadas, o semillas si no hay
+            // Mostrar usuario y rol si se pasó uno
+            if (usuario != null)
+            {
+                txtUsuarioActual.Text = usuario.Nombre ?? "Usuario";
+                txtRolUsuario.Text = usuario.Rol ?? txtRolUsuario.Text;
+            }
+            else
+            {
+                // Valor por defecto si no se proporcionó usuario
+                txtUsuarioActual.Text = "Usuario Demo";
+            }
+
+            // Cargar acciones guardadas o semillas
             if (!CargarAccionesGuardadas())
             {
                 AgregarAccionSiNoExiste("NuevaVenta");
-                AgregarAccionSiNoExiste("NuevaCompra");
                 AgregarAccionSiNoExiste("AgregarProducto");
                 AgregarAccionSiNoExiste("NuevoProveedor");
                 GuardarAcciones();
             }
 
-            // Guardar al cerrar
             this.Closed += (_, __) => GuardarAcciones();
         }
 
+        // Este método se llama desde XAML Loaded="Window_Loaded"
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            txtUsuarioActual.Text = "Usuario Demo";
+            try
+            {
+                BarcodeScannerService.Start();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("Error iniciando BarcodeScannerService: " + ex.Message);
+            }
+
             await RefreshAsync();
         }
 
@@ -101,8 +121,10 @@ namespace System_Market
 
                 txtTotalProductos.Text = result.productos.Count.ToString();
                 txtStockBajo.Text = result.productos.Count(p => p.Stock <= UMBRAL_STOCK_BAJO).ToString();
-                txtVentasHoy.Text = "S/ " + result.ventas.Sum(v => v.Total).ToString("0.00");
-                txtComprasHoy.Text = "S/ " + result.compras.Sum(c => c.Total).ToString("0.00");
+
+                txtVentasHoy.Text = CurrencyService.FormatSoles(result.ventas.Sum(v => v.Total));
+                txtComprasHoy.Text = CurrencyService.FormatSoles(result.compras.Sum(c => c.Total));
+
                 txtProductoMasVendido.Text = result.masVendido ?? "Sin ventas";
             }
             catch (Exception ex)
@@ -146,145 +168,65 @@ namespace System_Market
             return null;
         }
 
+        // Botones del UI
         private async void BtnRefrescarDashboard_Click(object sender, RoutedEventArgs e) => await RefreshAsync();
+        private async void BtnDashboard_Click(object sender, RoutedEventArgs e) { new DashboardWindow().ShowDialog(); await RefreshAsync(); }
+        private async void BtnProductos_Click(object sender, RoutedEventArgs e) { new ProductoWindow().ShowDialog(); await RefreshAsync(); }
+        private async void BtnVentas_Click(object sender, RoutedEventArgs e) { new VentaWindow().ShowDialog(); await RefreshAsync(); }
+        private async void BtnCompras_Click(object sender, RoutedEventArgs e) { new CompraWindow().ShowDialog(); await RefreshAsync(); }
+        private async void BtnProveedores_Click(object sender, RoutedEventArgs e) { new ProveedorWindow().ShowDialog(); await RefreshAsync(); }
+        private async void BtnUsuarios_Click(object sender, RoutedEventArgs e) { new UsuarioWindow().ShowDialog(); await RefreshAsync(); }
+        private async void BtnCategorias_Click(object sender, RoutedEventArgs e) { new CategoriaWindow().ShowDialog(); await RefreshAsync(); }
+        private void BtnReportes_Click(object sender, RoutedEventArgs e) { /* implementar */ }
 
-        private async void BtnNuevaVenta_Click(object sender, RoutedEventArgs e)
-        {
-            new VentaWindow().ShowDialog();
-            await RefreshAsync();
-        }
-        private async void BtnNuevaCompra_Click(object sender, RoutedEventArgs e)
-        {
-            new CompraWindow().ShowDialog();
-            await RefreshAsync();
-        }
-        private async void BtnAgregarProducto_Click(object sender, RoutedEventArgs e)
-        {
-            var win = new ProductoEdicionWindow(_conn);
-            if (win.ShowDialog() == true)
-            {
-                _productoService.AgregarProducto(win.Producto);
-            }
-            await RefreshAsync();
-        }
-        private async void BtnNuevoProveedor_Click(object sender, RoutedEventArgs e)
-        {
-            new ProveedorWindow().ShowDialog();
-            await RefreshAsync();
-        }
-        private async void BtnProductos_Click(object sender, RoutedEventArgs e)
-        {
-            new ProductoWindow().ShowDialog();
-            await RefreshAsync();
-        }
-        private async void BtnCategorias_Click(object sender, RoutedEventArgs e)
-        {
-            new CategoriaWindow().ShowDialog();
-            await RefreshAsync();
-        }
-        private async void BtnProveedores_Click(object sender, RoutedEventArgs e)
-        {
-            new ProveedorWindow().ShowDialog();
-            await RefreshAsync();
-        }
-        private async void BtnUsuarios_Click(object sender, RoutedEventArgs e)
-        {
-            new UsuarioWindow().ShowDialog();
-            await RefreshAsync();
-        }
-        private async void BtnVentas_Click(object sender, RoutedEventArgs e)
-        {
-            new VentaWindow().ShowDialog();
-            await RefreshAsync();
-        }
-        private async void BtnCompras_Click(object sender, RoutedEventArgs e)
-        {
-            new CompraWindow().ShowDialog();
-            await RefreshAsync();
-        }
-        private async void BtnDashboard_Click(object sender, RoutedEventArgs e)
-        {
-            new DashboardWindow().ShowDialog();
-            await RefreshAsync();
-        }
-
-        private void BtnReportes_Click(object sender, RoutedEventArgs e)
-        {
-        }
-
-        // ====== Acciones rápidas dinámicas (con persistencia) ======
         private void BtnAgregarAccion_Click(object sender, RoutedEventArgs e)
         {
             if (cbAccion.SelectedValue is string clave)
             {
-                if (AgregarAccionSiNoExiste(clave))
-                    GuardarAcciones();
-                cbAccion.SelectedIndex = -1; // limpia selección tras agregar
+                if (AgregarAccionSiNoExiste(clave)) GuardarAcciones();
+                cbAccion.SelectedIndex = -1;
             }
         }
 
         private bool AgregarAccionSiNoExiste(string clave)
         {
             if (_accionesRapidas.Any(a => a.Clave == clave)) return false;
-
             var def = _catalogoAcciones.FirstOrDefault(x => x.Clave == clave);
             if (def == null) return false;
-
-            var qa = BuildQuickAction(def);
-            _accionesRapidas.Add(qa);
+            _accionesRapidas.Add(BuildQuickAction(def));
             return true;
         }
 
-        private QuickAction BuildQuickAction(AccionDef def)
+        private QuickAction BuildQuickAction(AccionDef def) => new QuickAction
         {
-            return new QuickAction
+            Clave = def.Clave,
+            Titulo = def.Titulo,
+            Icono = def.Icono,
+            Ejecutar = def.Clave switch
             {
-                Clave = def.Clave,
-                Titulo = def.Titulo,
-                Icono = def.Icono,
-                Ejecutar = def.Clave switch
+                "NuevaVenta" => () => { new VentaWindow().ShowDialog(); _ = RefreshAsync(); },
+                "NuevaCompra" => () => { new CompraWindow().ShowDialog(); _ = RefreshAsync(); },
+                "AgregarProducto" => () =>
                 {
-                    "NuevaVenta" => () => { new VentaWindow().ShowDialog(); _ = RefreshAsync(); }
-                    ,
-                    "NuevaCompra" => () => { new CompraWindow().ShowDialog(); _ = RefreshAsync(); }
-                    ,
-                    "AgregarProducto" => () =>
-                    {
-                        var win = new ProductoEdicionWindow(_conn);
-                        if (win.ShowDialog() == true)
-                        {
-                            _productoService.AgregarProducto(win.Producto);
-                        }
-                        _ = RefreshAsync();
-                    }
-                    ,
-                    "NuevoProveedor" => () => { new ProveedorWindow().ShowDialog(); _ = RefreshAsync(); }
-                    ,
-                    "Productos" => () => { new ProductoWindow().ShowDialog(); _ = RefreshAsync(); }
-                    ,
-                    "Ventas" => () => { new HistorialVentasWindow().ShowDialog(); _ = RefreshAsync(); }
-                    ,
-                    "Compras" => () => { new HistorialComprasWindow().ShowDialog(); _ = RefreshAsync(); }
-                    ,
-                    "Proveedores" => () => { new ProveedorWindow().ShowDialog(); _ = RefreshAsync(); }
-                    ,
-                    "Usuarios" => () => { new UsuarioWindow().ShowDialog(); _ = RefreshAsync(); }
-                    ,
-                    "Categorias" => () => { new CategoriaWindow().ShowDialog(); _ = RefreshAsync(); }
-                    ,
-                    "Dashboard" => () => { new DashboardWindow().ShowDialog(); _ = RefreshAsync(); }
-                    ,
-                    _ => () => { }
-                }
-            };
-        }
+                    var win = new ProductoEdicionWindow(_conn);
+                    if (win.ShowDialog() == true) _productoService.AgregarProducto(win.Producto);
+                    _ = RefreshAsync();
+                },
+                "NuevoProveedor" => () => { new ProveedorWindow().ShowDialog(); _ = RefreshAsync(); },
+                "Productos" => () => { new ProductoWindow().ShowDialog(); _ = RefreshAsync(); },
+                "Ventas" => () => { new HistorialVentasWindow().ShowDialog(); _ = RefreshAsync(); },
+                "Compras" => () => { new HistorialComprasWindow().ShowDialog(); _ = RefreshAsync(); },
+                "Proveedores" => () => { new ProveedorWindow().ShowDialog(); _ = RefreshAsync(); },
+                "Usuarios" => () => { new UsuarioWindow().ShowDialog(); _ = RefreshAsync(); },
+                "Categorias" => () => { new CategoriaWindow().ShowDialog(); _ = RefreshAsync(); },
+                "Dashboard" => () => { new DashboardWindow().ShowDialog(); _ = RefreshAsync(); },
+                _ => () => { }
+            }
+        };
 
         private void QuickAction_Click(object sender, RoutedEventArgs e)
         {
-            if ((sender as Button)?.DataContext is QuickAction qa)
-            {
-                qa.Ejecutar?.Invoke();
-            }
+            if ((sender as Button)?.DataContext is QuickAction qa) qa.Ejecutar?.Invoke();
         }
 
         private void QuickAction_Quitar_Click(object sender, RoutedEventArgs e)
@@ -296,73 +238,66 @@ namespace System_Market
             }
         }
 
-        // Persistencia JSON en AppData
         private bool CargarAccionesGuardadas()
         {
             try
             {
-                var file = AccionesFilePath;
-                if (!File.Exists(file)) return false;
-
-                var json = File.ReadAllText(file);
+                if (!File.Exists(AccionesFilePath)) return false;
+                var json = File.ReadAllText(AccionesFilePath);
                 var claves = JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>();
                 bool added = false;
-                foreach (var clave in claves)
-                {
-                    added |= AgregarAccionSiNoExiste(clave);
-                }
+                foreach (var c in claves) added |= AgregarAccionSiNoExiste(c);
                 return added || claves.Count > 0;
             }
-            catch
-            {
-                return false;
-            }
+            catch { return false; }
         }
 
         private void GuardarAcciones()
         {
             try
             {
-                var dir = Path.GetDirectoryName(AccionesFilePath)!;
-                if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
-
-                var claves = _accionesRapidas.Select(a => a.Clave).ToList();
-                var json = JsonSerializer.Serialize(claves, new JsonSerializerOptions { WriteIndented = true });
+                Directory.CreateDirectory(Path.GetDirectoryName(AccionesFilePath)!);
+                var json = JsonSerializer.Serialize(_accionesRapidas.Select(a => a.Clave).ToList(), new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(AccionesFilePath, json);
             }
-            catch
-            {
-                // Ignorar fallos de escritura
-            }
+            catch { }
         }
 
-        private void RefreshSync()
+        // Acerca de
+        private void BtnAbout_Click(object sender, RoutedEventArgs e)
+        {
+            var about = new AboutWindow { Owner = this, WindowStartupLocation = WindowStartupLocation.CenterOwner };
+            about.ShowDialog();
+        }
+
+        // Cerrar sesión: oculta main, muestra login modal y actúa según resultado
+        private void BtnLogout_Click(object sender, RoutedEventArgs e)
         {
             try
             {
-                var start = DateTime.Today;
-                var end = start.AddDays(1).AddTicks(-1);
+                this.Hide();
+                var login = new LoginWindow();
+                bool? result = login.ShowDialog();
 
-                var productos = _productoService.ObtenerTodos();
-                var ventasHoy = _ventaService.ObtenerTodas()
-                    .Where(v => v.Estado == "Activa" && v.Fecha >= start && v.Fecha <= end).ToList();
-                var comprasHoy = _compraService.ObtenerTodas()
-                    .Where(c => c.Estado == "Activa" && c.Fecha >= start && c.Fecha <= end).ToList();
-
-                txtTotalProductos.Text = productos.Count.ToString();
-                txtStockBajo.Text = productos.Count(p => p.Stock <= UMBRAL_STOCK_BAJO).ToString();
-                txtVentasHoy.Text = "S/ " + ventasHoy.Sum(v => v.Total).ToString("0.00");
-                txtComprasHoy.Text = "S/ " + comprasHoy.Sum(c => c.Total).ToString("0.00");
-                txtProductoMasVendido.Text = ObtenerProductoMasVendidoEnRango(start, end) ?? "Sin ventas";
+                if (result == true && login.UsuarioLogueado != null)
+                {
+                    txtUsuarioActual.Text = login.UsuarioLogueado.Nombre;
+                    txtRolUsuario.Text = login.UsuarioLogueado.Rol ?? txtRolUsuario.Text;
+                    _ = RefreshAsync();
+                    this.Show();
+                }
+                else
+                {
+                    Application.Current.Shutdown();
+                }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error al refrescar: " + ex.Message, "Error",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Error al cerrar sesión: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                Application.Current.Shutdown();
             }
         }
 
-        // Tipos auxiliares
         private record AccionDef(string Clave, string Titulo, string Icono);
 
         private class QuickAction

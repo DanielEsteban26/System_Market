@@ -157,29 +157,41 @@ namespace System_Market.Services
 
         public Producto? ObtenerPorCodigoBarras(string codigoBarras)
         {
+            if (string.IsNullOrWhiteSpace(codigoBarras)) return null;
+
+            string original = codigoBarras.Trim();
+            string sinCeros = original.TrimStart('0');
+            string padded13 = (sinCeros.All(char.IsDigit) && sinCeros.Length > 0 && sinCeros.Length < 13)
+                ? sinCeros.PadLeft(13, '0')
+                : sinCeros;
+
             using var connection = new SQLiteConnection(_connectionString);
             connection.Open();
 
             string query = @"
                 SELECT Id, CodigoBarras, Nombre, CategoriaId, ProveedorId, PrecioCompra, PrecioVenta, Stock
                 FROM Productos
-                WHERE CodigoBarras = @CodigoBarras";
+                WHERE TRIM(CodigoBarras) IN (@c1, @c2, @c3)
+                LIMIT 1;";
+
             using var cmd = new SQLiteCommand(query, connection);
-            cmd.Parameters.AddWithValue("@CodigoBarras", codigoBarras);
+            cmd.Parameters.AddWithValue("@c1", original);
+            cmd.Parameters.AddWithValue("@c2", sinCeros);
+            cmd.Parameters.AddWithValue("@c3", padded13);
 
             using var reader = cmd.ExecuteReader();
             if (reader.Read())
             {
                 return new Producto
                 {
-                    Id            = reader.GetInt32(0),
-                    CodigoBarras  = reader.IsDBNull(1) ? null : reader.GetString(1),
-                    Nombre        = reader.IsDBNull(2) ? string.Empty : reader.GetString(2),
-                    CategoriaId   = reader.IsDBNull(3) ? (int?)null : reader.GetInt32(3),
-                    ProveedorId   = reader.IsDBNull(4) ? (int?)null : reader.GetInt32(4),
-                    PrecioCompra  = reader.GetDecimal(5),
-                    PrecioVenta   = reader.GetDecimal(6),
-                    Stock         = reader.GetInt32(7)
+                    Id           = reader.GetInt32(0),
+                    CodigoBarras = reader.IsDBNull(1) ? null : reader.GetString(1),
+                    Nombre       = reader.IsDBNull(2) ? string.Empty : reader.GetString(2),
+                    CategoriaId  = reader.IsDBNull(3) ? (int?)null : reader.GetInt32(3),
+                    ProveedorId  = reader.IsDBNull(4) ? (int?)null : reader.GetInt32(4),
+                    PrecioCompra = reader.GetDecimal(5),
+                    PrecioVenta  = reader.GetDecimal(6),
+                    Stock        = reader.GetInt32(7)
                 };
             }
             return null;

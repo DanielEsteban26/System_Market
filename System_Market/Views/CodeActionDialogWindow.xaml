@@ -1,0 +1,38 @@
+<Window x:Class="System_Market.Views.CodeActionDialogWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Acción con código" SizeToContent="WidthAndHeight"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        WindowStyle="ToolWindow"
+        Background="{DynamicResource MaterialDesignPaper}"
+        FontFamily="Segoe UI"
+        MinWidth="340" MinHeight="160">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="16"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="12"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock x:Name="txtTitulo"
+                   FontSize="16"
+                   FontWeight="SemiBold"
+                   Text="Código escaneado"
+                   Margin="0,0,0,4"/>
+
+        <TextBlock x:Name="txtCodigo"
+                   Grid.Row="2"
+                   FontSize="14"
+                   Foreground="#FF555555"
+                   TextWrapping="Wrap"/>
+
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button x:Name="btnVenta" Width="90" Margin="0,0,8,0" Click="BtnVenta_Click" Content="Venta"/>
+            <Button x:Name="btnCompra" Width="90" Margin="0,0,8,0" Click="BtnCompra_Click" Content="Compra"/>
+            <Button x:Name="btnCancelar" Width="90" Click="BtnCancelar_Click" Content="Cancelar"/>
+        </StackPanel>
+    </Grid>
+</Window>

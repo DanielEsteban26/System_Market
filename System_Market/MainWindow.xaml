@@ -3,7 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         Title="Minimarket"
-        Height="640" Width="1180"
+        Height="684" Width="1180"
+        
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource MaterialDesignPaper}"
         FontFamily="Segoe UI"
@@ -60,6 +61,11 @@
             <Setter Property="Background" Value="#009688"/>
         </Style>
 
+        <!-- Danger (Cerrar sesión) -->
+        <Style x:Key="BtnDanger" TargetType="Button" BasedOn="{StaticResource BtnBase}">
+            <Setter Property="Background" Value="#E53935"/> <!-- rojo -->
+        </Style>
+
         <!-- Icono KPI -->
         <Style x:Key="IconKpi" TargetType="TextBlock">
             <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
@@ -86,54 +92,112 @@
             <Setter Property="MinWidth" Value="170"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
+
+        <!-- Estilos de botón únicos para cada opción -->
+        <Style x:Key="BtnProductos" TargetType="Button" BasedOn="{StaticResource BtnBase}">
+            <Setter Property="Background" Value="#3F51B5"/>
+        </Style>
+        <Style x:Key="BtnVentas" TargetType="Button" BasedOn="{StaticResource BtnBase}">
+            <Setter Property="Background" Value="#2196F3"/>
+        </Style>
+        <Style x:Key="BtnCompras" TargetType="Button" BasedOn="{StaticResource BtnBase}">
+            <Setter Property="Background" Value="#FF9800"/>
+        </Style>
+        <Style x:Key="BtnProveedores" TargetType="Button" BasedOn="{StaticResource BtnBase}">
+            <Setter Property="Background" Value="#009688"/>
+        </Style>
+        <Style x:Key="BtnUsuarios" TargetType="Button" BasedOn="{StaticResource BtnBase}">
+            <Setter Property="Background" Value="#9C27B0"/>
+        </Style>
+        <Style x:Key="BtnCategorias" TargetType="Button" BasedOn="{StaticResource BtnBase}">
+            <Setter Property="Background" Value="#E91E63"/>
+        </Style>
+        <Style x:Key="BtnReportes" TargetType="Button" BasedOn="{StaticResource BtnBase}">
+            <Setter Property="Background" Value="#FF5722"/>
+        </Style>
+        <Style x:Key="BtnAbout" TargetType="Button" BasedOn="{StaticResource BtnBase}">
+            <Setter Property="Background" Value="#607D8B"/>
+        </Style>
+
+        <!-- Estilo específico para Dashboard -->
+        <Style x:Key="BtnDashboard" TargetType="Button" BasedOn="{StaticResource BtnBase}">
+            <Setter Property="Background" Value="#6A1B9A"/>
+        </Style>
     </Window.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="56"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="28"/>
         </Grid.RowDefinitions>
 
         <!-- Top bar -->
         <Border Grid.Row="0" Background="{StaticResource TopBarBg}">
-            <Grid Margin="14,0">
+            <Grid Margin="12,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <!-- Izquierda: título -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
                     <TextBlock Text="Sistema Minimarket"
                                Foreground="White"
                                FontSize="18"
                                FontWeight="SemiBold"
-                               Margin="0,0,20,0"/>
+                               VerticalAlignment="Center"
+                               Margin="6,0"/>
+                </StackPanel>
+
+                <!-- Centro: acciones (centradas) -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <StackPanel.Resources>
+                        <Style TargetType="FrameworkElement">
+                            <Setter Property="Margin" Value="0,0,10,0"/>
+                        </Style>
+                    </StackPanel.Resources>
                     <Button Content="Dashboard"
-                            Style="{StaticResource BtnPrimary}"
-                            Padding="12,4"
-                            Margin="0,0,10,0"
+                            Style="{StaticResource BtnDashboard}"
+                            Height="30"
+                            Padding="10,4"
                             Click="BtnDashboard_Click"/>
                     <Button Content="Refrescar"
                             Style="{StaticResource BtnAccent}"
-                            Padding="12,4"
+                            Height="30"
+                            Padding="10,4"
                             Click="BtnRefrescarDashboard_Click"/>
                 </StackPanel>
 
-                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                <!-- Derecha: usuario, rol y logout -->
+                <!-- Reemplaza la línea con Spacing, ya que StackPanel en WPF no tiene la propiedad 'Spacing'.
+                     Para lograr el mismo efecto, puedes agregar un Margin a los elementos hijos dentro del StackPanel. -->
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right">
                     <TextBlock x:Name="txtUsuarioActual"
                                Foreground="White"
                                FontWeight="Bold"
                                FontSize="14"
                                VerticalAlignment="Center"
-                               Text="Usuario Demo"/>
-                    <Border x:Name="bdRol" Style="{StaticResource RoleChip}">
+                               Text="Usuario Demo"
+                               Margin="0,0,8,0"/>
+                    <Border x:Name="bdRol" Style="{StaticResource RoleChip}" VerticalAlignment="Center" Margin="0,0,8,0">
                         <TextBlock x:Name="txtRolUsuario"
                                    Text="Administrador"
                                    Foreground="White"
                                    FontSize="12"
-                                   FontWeight="SemiBold"/>
+                                   FontWeight="SemiBold"
+                                   Margin="8,0"/>
                     </Border>
+                    <Button x:Name="btnCerrarSesion"
+                            Content="Cerrar sesión"
+                            Style="{StaticResource BtnDanger}"
+                            Height="30"
+                            Padding="10,2"
+                            Margin="10,0,0,0"
+                            Click="BtnLogout_Click"
+                            ToolTip="Cerrar sesión"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -148,14 +212,15 @@
             <Border Grid.Column="0" Background="#F8F9FA" BorderBrush="#D9DEE2" BorderThickness="0,0,1,0">
                 <StackPanel Margin="14">
                     <TextBlock Text="Menú" FontWeight="SemiBold" Foreground="#546E7A" Margin="2,4,2,12"/>
-                    <Button Content="Productos" Style="{StaticResource BtnSuccess}" Click="BtnProductos_Click" Margin="0,0,0,6"/>
-                    <Button Content="Ventas" Style="{StaticResource BtnAccent}" Click="BtnVentas_Click" Margin="0,0,0,6"/>
-                    <Button Content="Compras" Style="{StaticResource BtnWarn}" Click="BtnCompras_Click" Margin="0,0,0,6"/>
-                    <Button Content="Proveedores" Style="{StaticResource BtnPrimary}" Click="BtnProveedores_Click" Margin="0,0,0,6"/>
-                    <Button Content="Usuarios" Style="{StaticResource BtnPrimary}" Click="BtnUsuarios_Click" Margin="0,0,0,6"/>
-                    <Button Content="Categorías" Style="{StaticResource BtnPrimary}" Click="BtnCategorias_Click" Margin="0,6,0,6"/>
+                    <Button Content="Productos" Style="{StaticResource BtnProductos}" Click="BtnProductos_Click" Margin="0,0,0,6"/>
+                    <Button Content="Ventas" Style="{StaticResource BtnVentas}" Click="BtnVentas_Click" Margin="0,0,0,6"/>
+                    <Button Content="Compras" Style="{StaticResource BtnCompras}" Click="BtnCompras_Click" Margin="0,0,0,6"/>
+                    <Button Content="Proveedores" Style="{StaticResource BtnProveedores}" Click="BtnProveedores_Click" Margin="0,0,0,6"/>
+                    <Button Content="Usuarios" Style="{StaticResource BtnUsuarios}" Click="BtnUsuarios_Click" Margin="0,0,0,6"/>
+                    <Button Content="Categorías" Style="{StaticResource BtnCategorias}" Click="BtnCategorias_Click" Margin="0,6,0,6"/>
                     <Separator/>
-                    <Button Content="Reportes" Style="{StaticResource BtnPrimary}" Click="BtnReportes_Click"/>
+                    <Button Content="Reportes" Style="{StaticResource BtnReportes}" Click="BtnReportes_Click" Margin="0,0,0,6"/>
+                    <Button Content="Acerca de" Style="{StaticResource BtnAbout}" Click="BtnAbout_Click" Margin="0,0,0,6"/>
                 </StackPanel>
             </Border>
 
@@ -273,7 +338,6 @@
                                        FontSize="12"/>
                         </StackPanel>
                     </materialDesign:Card>
-
                 </StackPanel>
             </ScrollViewer>
         </Grid>

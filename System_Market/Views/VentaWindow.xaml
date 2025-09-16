@@ -91,7 +91,8 @@
                     </Button>
                 </StackPanel>
 
-                <Button Grid.Column="2"
+                <Button x:Name="btnAgregarProducto"
+                        Grid.Column="2"
                         Padding="14,6"
                         Background="{StaticResource BrushBtnPrimary}"
                         Foreground="White"

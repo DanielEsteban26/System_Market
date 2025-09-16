@@ -315,8 +315,8 @@ namespace System_Market.Views
                 MessageBoxImage.Question) != MessageBoxResult.Yes) return;
 
             lblProductoOverlay.Text = prodSel.Nombre;
-            txtNuevoPrecioCompra.Text = prodSel.PrecioCompra.ToString("0.00");
-            txtNuevoPrecioVenta.Text = prodSel.PrecioVenta.ToString("0.00");
+            txtNuevoPrecioCompra.Text = CurrencyService.FormatNumber(prodSel.PrecioCompra, "N2");
+            txtNuevoPrecioVenta.Text = CurrencyService.FormatNumber(prodSel.PrecioVenta, "N2");
             panelEditorPrecios.Visibility = Visibility.Visible;
         }
 

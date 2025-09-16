@@ -1,0 +1,82 @@
+<Window x:Class="System_Market.Views.LoginWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Iniciar Sesión" Height="383" Width="380"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize"
+        Background="{DynamicResource MaterialDesignPaper}">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Título -->
+            <RowDefinition Height="Auto"/> <!-- Usuario -->
+            <RowDefinition Height="Auto"/> <!-- Contraseña -->
+            <RowDefinition Height="Auto"/> <!-- Botones -->
+            <RowDefinition Height="Auto"/> <!-- Créditos -->
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="Iniciar Sesión"
+                   FontSize="20"
+                   FontWeight="Bold"
+                   Margin="0,0,0,18"/>
+
+        <TextBox x:Name="txtUsuario"
+                 Grid.Row="1"
+                 Height="38"
+                 Margin="0,0,0,10"
+                 VerticalContentAlignment="Center"
+                 FontSize="14"
+                 materialDesign:HintAssist.Hint="Usuario"/>
+
+        <PasswordBox x:Name="txtPassword"
+                     Grid.Row="2"
+                     Height="38"
+                     Margin="0,0,0,18"
+                     VerticalContentAlignment="Center"
+                     FontSize="14"
+                     materialDesign:HintAssist.Hint="Contraseña"/>
+
+        <!-- Fila de botones: Ingresar y Regístrate lado a lado -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center">
+            <Button x:Name="btnIngresar"
+                    Content="Ingresar"
+                    Width="140"
+                    Height="38"
+                    Background="{DynamicResource PrimaryHueMidBrush}"
+                    Foreground="White"
+                    FontWeight="SemiBold"
+                    Margin="0,0,12,0"
+                    Click="BtnIngresar_Click"/>
+
+            <Button x:Name="btnRegister"
+                    Content="Regístrate"
+                    Width="120"
+                    Height="38"
+                    Background="Transparent"
+                    BorderBrush="{DynamicResource PrimaryHueMidBrush}"
+                    Foreground="{DynamicResource PrimaryHueMidBrush}"
+                    FontWeight="SemiBold"
+                    Click="btnRegister_Click"/>
+        </StackPanel>
+
+        <!-- Créditos compactos abajo -->
+        <StackPanel Grid.Row="4" Orientation="Vertical" HorizontalAlignment="Center" Margin="0,18,0,0">
+            <TextBlock FontSize="12" Foreground="#607D8B" TextAlignment="Center">
+                Autor:
+                <Run FontWeight="SemiBold" Foreground="#37474F"> Daniel Isidro</Run>
+            </TextBlock>
+
+            <TextBlock FontSize="12" Foreground="#607D8B" TextAlignment="Center" Margin="0,6,0,0">
+                <Run FontFamily="Segoe UI Emoji" FontSize="12" Text="✉️ "/>
+                <Hyperlink NavigateUri="mailto:isidroesteban402@gmail.com" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#2196F3">
+                    isidroesteban402@gmail.com
+                </Hyperlink>
+                <Run Text="   "/>
+                <Run FontFamily="Segoe UI Emoji" FontSize="12" Text="🐙 "/>
+                <Hyperlink NavigateUri="https://github.com/DanielEsteban26/System_Market" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#2196F3">
+                    GitHub
+                </Hyperlink>
+            </TextBlock>
+        </StackPanel>
+    </Grid>
+</Window>

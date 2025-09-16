@@ -21,14 +21,22 @@ namespace System_Market.Services
 
         // Parámetros ajustables
         private const int MinLength = 5;
-        private const int ExpectedLength = 13;          // EAN-13 (solo como optimización; no bloquea alfanuméricos)
-        private const int IdleFinalizeMs = 140;         // ligera holgura
-        private const int MaxAvgIntervalMs = 80;        // permitir lectores un poco más lentos
+        private const int ExpectedLength = 13;
+        private const int IdleFinalizeMs = 140;
+        private const int MaxAvgIntervalMs = 80;
         private const int MaxLength = 256;
-
-        private static readonly int[] PlausibleLengths = { 8, 12, 13, 14, 18 }; // heurística opcional
+        private static readonly int[] PlausibleLengths = { 8, 12, 13, 14, 18 };
 
         private const bool EnableDebug = false;
+
+        // NUEVO: cache del último código
+        private static string? _lastCode;
+        private static DateTime _lastCodeTime;
+
+        // Evento opcional (si alguna vista quiere engancharse)
+        public static event Action<string>? CodeScanned;
+
+        private static readonly Queue<string> _pendingVentaCodes = new();   // cola simple (UI thread)
 
         public static void Start()
         {
@@ -48,7 +56,6 @@ namespace System_Market.Services
 
         private static void OnPreProcessInput(object? sender, PreProcessInputEventArgs e)
         {
-            // Finalización por Enter/Tab
             if (e.StagingItem.Input is KeyEventArgs ke &&
                 ke.RoutedEvent == Keyboard.KeyDownEvent &&
                 (ke.Key == Key.Return || ke.Key == Key.Enter || ke.Key == Key.Tab))
@@ -59,7 +66,6 @@ namespace System_Market.Services
                 return;
             }
 
-            // Tomar caracteres de KeyDown (mapeo extendido)
             if (e.StagingItem.Input is KeyEventArgs keyArgs &&
                 keyArgs.RoutedEvent == Keyboard.KeyDownEvent)
             {
@@ -75,7 +81,7 @@ namespace System_Market.Services
 
                 if (_buffer.Length > MaxLength)
                 {
-                    if (EnableDebug) Debug.WriteLine($"[Scanner] Exceso longitud ({_buffer.Length}), forzando finalización.");
+                    if (EnableDebug) Debug.WriteLine($"[Scanner] Exceso longitud {_buffer.Length}");
                     _idleTimer!.Stop();
                     TryFinalize();
                     Reset();
@@ -95,49 +101,123 @@ namespace System_Market.Services
             }
         }
 
+        private static bool EsCodigoPlausible(string code)
+        {
+            if (string.IsNullOrWhiteSpace(code)) return false;
+            if (code.Length < MinLength || code.Length > 64) return false;
+            if (PlausibleLengths.Contains(code.Length)) return true;
+            // Aceptar si todos son dígitos o alfanumérico
+            return code.All(char.IsLetterOrDigit);
+        }
+
         private static void TryFinalize()
         {
             if (_buffer.Length < MinLength) return;
-            if (_intervalsMs.Count == 0) return;
 
-            var avg = _intervalsMs.Average();
-            if (avg <= MaxAvgIntervalMs)
+            var code = _buffer.ToString();
+            var avg = _intervalsMs.Count == 0 ? 0 : _intervalsMs.Average();
+            bool fast = avg <= MaxAvgIntervalMs;
+
+            // Antes se descartaba si no era "fast"; ahora aceptamos si es plausible
+            if (!fast && !EsCodigoPlausible(code))
+                return;
+
+            _lastCode = code;
+            _lastCodeTime = DateTime.UtcNow;
+
+            Application.Current.Dispatcher.Invoke(() =>
             {
-                var code = _buffer.ToString();
+                bool handled = false;
 
-                Application.Current.Dispatcher.Invoke(() =>
+                // 1) Venta (prioridad: evitar reabrir creación cuando hay VentaWindow abierta)
+                var ventaWin = Application.Current.Windows
+                    .OfType<VentaWindow>()
+                    .Where(w => w.IsVisible)
+                    .OrderByDescending(w => w.IsActive)
+                    .ThenByDescending(w => w.IsFocused)
+                    .FirstOrDefault();
+                if (ventaWin != null)
                 {
-                    // Venta activa
-                    var ventaActiva = Application.Current.Windows.OfType<VentaWindow>().FirstOrDefault(w => w.IsActive);
-                    if (ventaActiva != null)
+                    ventaWin.HandleScannedCode(code);
+                    handled = true;
+                }
+
+                // 2) Compra
+                if (!handled)
+                {
+                    var compraWin = Application.Current.Windows
+                        .OfType<CompraWindow>()
+                        .Where(w => w.IsVisible)
+                        .OrderByDescending(w => w.IsActive)
+                        .ThenByDescending(w => w.IsFocused)
+                        .FirstOrDefault();
+                    if (compraWin != null)
                     {
-                        ventaActiva.HandleScannedCode(code);
-                        return;
+                        compraWin.HandleScannedCode(code);
+                        handled = true;
                     }
+                }
 
-                    // Compra activa
-                    var compraActiva = Application.Current.Windows.OfType<CompraWindow>().FirstOrDefault(w => w.IsActive);
-                    if (compraActiva != null)
+                // 3) Edición de producto (si no fue manejado por venta/compra)
+                if (!handled)
+                {
+                    var prodEditWin = Application.Current.Windows
+                        .OfType<ProductoEdicionWindow>()
+                        .Where(w => w.IsVisible)
+                        .OrderByDescending(w => w.IsActive)
+                        .ThenByDescending(w => w.IsFocused)
+                        .FirstOrDefault();
+                    if (prodEditWin != null)
                     {
-                        compraActiva.HandleScannedCode(code);
-                        return;
+                        prodEditWin.HandleScannedCode(code);
+                        handled = true;
                     }
+                }
 
-                    // Ventana de opciones (si aplica)
-                    if (Application.Current.Windows.OfType<ScanOptionsWindow>().Any())
-                        return;
-
-                    var owner = Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive)
-                                ?? Application.Current.MainWindow;
-                    var dlg = new ScanOptionsWindow(code)
+                // 4) Listado de productos
+                if (!handled)
+                {
+                    var prodWin = Application.Current.Windows
+                        .OfType<ProductoWindow>()
+                        .Where(w => w.IsVisible)
+                        .OrderByDescending(w => w.IsActive)
+                        .ThenByDescending(w => w.IsFocused)
+                        .FirstOrDefault();
+                    if (prodWin != null)
                     {
-                        Owner = owner,
-                        WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                        Topmost = true
-                    };
-                    dlg.ShowDialog();
-                });
-            }
+                        prodWin.HandleScannedCode(code);
+                        handled = true;
+                    }
+                }
+
+                // 5) Cola pendiente para futura Venta
+                if (!handled)
+                {
+                    if (_pendingVentaCodes.Count > 5) _pendingVentaCodes.Dequeue();
+                    _pendingVentaCodes.Enqueue(code);
+                }
+
+                CodeScanned?.Invoke(code);
+
+                if (EnableDebug)
+                    Debug.WriteLine($"[Scanner] Code='{code}' handled={handled}");
+            });
+        }
+
+        // Permite a una nueva VentaWindow re-consumir el último código si fue escaneado hace muy poco
+        public static bool TryReplayLastCodeFor(VentaWindow window, TimeSpan maxAge)
+        {
+            if (_lastCode == null) return false;
+            if ((DateTime.UtcNow - _lastCodeTime) > maxAge) return false;
+            window.HandleScannedCode(_lastCode);
+            return true;
+        }
+
+        public static List<string> DrainPendingVentaCodes()
+        {
+            var list = new List<string>(_pendingVentaCodes);
+            _pendingVentaCodes.Clear();
+            return list;
         }
 
         private static void Reset()
@@ -150,41 +230,37 @@ namespace System_Market.Services
         private static bool IsShiftPressed() =>
             Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift);
 
-        // Mapea teclas a caracteres (alfanuméricos + símbolos comunes en códigos de barras)
         private static char? MapKeyToChar(Key key, bool shift, bool caps)
         {
-            // Dígitos fila superior (sin Shift) y numpad
             if (key >= Key.D0 && key <= Key.D9 && !shift)
                 return (char)('0' + (key - Key.D0));
             if (key >= Key.NumPad0 && key <= Key.NumPad9)
                 return (char)('0' + (key - Key.NumPad0));
 
-            // Letras A-Z (respetando Shift y CapsLock)
             if (key >= Key.A && key <= Key.Z)
             {
                 char c = (char)('a' + (key - Key.A));
-                bool upper = shift ^ caps; // XOR: Shift o Caps activan mayúscula
+                bool upper = shift ^ caps;
                 return upper ? char.ToUpperInvariant(c) : c;
             }
 
-            // Símbolos comunes por layout en-US (suficiente para la mayoría de scanners en modo teclado)
             return key switch
             {
                 Key.OemMinus => shift ? '_' : '-',
-                Key.Subtract => '-', // Numpad
+                Key.Subtract => '-',
                 Key.OemPlus => shift ? '+' : '+',
-                Key.Add => '+',      // Numpad
-                Key.Multiply => '*', // Numpad
-                Key.Divide => '/',   // Numpad
-                Key.Oem2 => shift ? '?' : '/',      // / ?
-                Key.OemPeriod => '.',               // .
-                Key.OemComma => ',',                // ,
-                Key.Oem1 => shift ? ':' : ';',      // ; :
-                Key.Oem3 => shift ? '~' : '`',      // ` ~
-                Key.Oem4 => shift ? '{' : '[',      // [ {
-                Key.Oem5 => shift ? '|' : '\\',     // \ |
-                Key.Oem6 => shift ? '}' : ']',      // ] }
-                Key.Oem7 => shift ? '"' : '\'',     // ' "
+                Key.Add => '+',
+                Key.Multiply => '*',
+                Key.Divide => '/',
+                Key.Oem2 => shift ? '?' : '/',
+                Key.OemPeriod => '.',
+                Key.OemComma => ',',
+                Key.Oem1 => shift ? ':' : ';',
+                Key.Oem3 => shift ? '~' : '`',
+                Key.Oem4 => shift ? '{' : '[',
+                Key.Oem5 => shift ? '|' : '\\',
+                Key.Oem6 => shift ? '}' : ']',
+                Key.Oem7 => shift ? '"' : '\'',
                 Key.Space => ' ',
                 _ => null
             };

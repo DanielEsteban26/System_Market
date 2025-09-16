@@ -16,6 +16,12 @@ namespace System_Market.Views
         private readonly ProveedorService _proveedorService;
         private Producto _productoSeleccionado;
 
+        // --- NUEVO CÓDIGO ---
+        private DateTime _lastScanTime = DateTime.MinValue;
+        private string? _lastScanCode;
+        private bool _ventanaEdicionAbierta;
+        // --- FIN NUEVO CÓDIGO ---
+
         public ProductoWindow()
         {
             InitializeComponent();
@@ -126,6 +132,92 @@ namespace System_Market.Views
             else
             {
                 dgProductos.ItemsSource = _productoService.Filtrar(texto);
+            }
+        }
+
+        // --- ESCÁNER: llamado desde BarcodeScannerService cuando esta ventana está activa ---
+        public void HandleScannedCode(string codigo)
+        {
+            if (string.IsNullOrWhiteSpace(codigo)) return;
+            codigo = codigo.Trim();
+
+            // Evitar múltiples ventanas si el mismo código se repite muy rápido
+            var ahora = DateTime.UtcNow;
+            if (_lastScanCode == codigo && (ahora - _lastScanTime).TotalMilliseconds < 500)
+                return;
+
+            _lastScanCode = codigo;
+            _lastScanTime = ahora;
+
+            try
+            {
+                // Intentar localizar producto por código de barras
+                var prod = _productoService.ObtenerPorCodigoBarras(codigo);
+                if (prod != null)
+                {
+                    // Mostrarlo solo
+                    txtBuscar.Text = codigo;
+                    dgProductos.ItemsSource = new List<Producto> { prod };
+                    dgProductos.SelectedItem = prod;
+                    dgProductos.ScrollIntoView(prod);
+                    return;
+                }
+
+                // Si ya hay una ventana de edición abierta por un escaneo previo, ignorar este
+                if (_ventanaEdicionAbierta) return;
+
+                _ventanaEdicionAbierta = true;
+
+                // Abrir creación con el código prellenado y bloqueado
+                var win = new ProductoEdicionWindow(
+                    DatabaseInitializer.GetConnectionString(),
+                    producto: null,
+                    codigoPrefill: codigo,
+                    bloquearCodigo: true)
+                {
+                    Owner = this,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                };
+
+                var ok = win.ShowDialog() == true && win.Producto != null;
+                _ventanaEdicionAbierta = false;
+
+                if (ok)
+                {
+                    try
+                    {
+                        _productoService.AgregarProducto(win.Producto);
+                        // Recargar listado completo y seleccionar el nuevo
+                        CargarProductos();
+                        var lista = dgProductos.ItemsSource as IEnumerable<Producto>;
+                        var recien = lista?.FirstOrDefault(p => p.Id == win.Producto.Id);
+                        if (recien != null)
+                        {
+                            dgProductos.SelectedItem = recien;
+                            dgProductos.ScrollIntoView(recien);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("Error guardando producto: " + ex.Message,
+                            "Producto", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                }
+                else
+                {
+                    // Si se cancela, restaurar búsqueda vacía para volver a la lista
+                    if (string.Equals(txtBuscar.Text, codigo, StringComparison.OrdinalIgnoreCase))
+                    {
+                        txtBuscar.Clear();
+                        CargarProductos();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _ventanaEdicionAbierta = false;
+                MessageBox.Show("Error procesando escaneo: " + ex.Message,
+                    "Escáner", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
     }

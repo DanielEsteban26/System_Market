@@ -140,8 +140,8 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- Scanee producto (etiqueta arriba, campo debajo centrado) -->
-                    <StackPanel Grid.Column="0" Margin="0,0,8,0" VerticalAlignment="Top">
+                    <!-- Se oculta el panel que solo mostraba el nombre y se activa el ComboBox editable -->
+                    <StackPanel Grid.Column="0" Margin="0,0,8,0" Visibility="Collapsed">
                         <TextBlock Text="Scanee producto"
                                    FontSize="12"
                                    Margin="2,0,0,4"
@@ -162,9 +162,9 @@
                                  KeyDown="TxtCodigoCompra_KeyDown"/>
                     </StackPanel>
 
-                    <!-- Producto (oculto) -->
-                    <StackPanel Grid.Column="0" Margin="0,0,8,0" Visibility="Collapsed">
-                        <TextBlock Text="Producto" FontSize="12" Margin="2,0,0,4"
+                    <!-- Producto: ahora visible y editable (puede filtrar, seleccionar o recibir escaneo) -->
+                    <StackPanel Grid.Column="0" Margin="0,0,8,0" Visibility="Visible">
+                        <TextBlock Text="Scanee o seleccione un producto" FontSize="12" Margin="2,0,0,4"
                                    Foreground="{DynamicResource MaterialDesignBody}"/>
                         <ComboBox x:Name="cmbProducto"
                                   Height="{StaticResource CtlHeight}"
@@ -176,7 +176,8 @@
                                   StaysOpenOnEdit="True"
                                   TextSearch.TextPath="Nombre"
                                   ItemTemplate="{StaticResource ProductoItemTemplate}"
-                                  SelectionChanged="cmbProducto_SelectionChanged"/>
+                                  SelectionChanged="cmbProducto_SelectionChanged"
+                                  materialDesign:HintAssist.HelperText="Escanea o escribe para buscar"/>
                     </StackPanel>
 
                     <!-- Nuevo -->

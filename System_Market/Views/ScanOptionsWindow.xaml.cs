@@ -91,7 +91,8 @@ namespace System_Market.Views
                 return;
             }
             var codigo = _codigo;
-            Navegar(() => new CompraWindow(codigo).Show());
+            // Elimina el argumento 'true' ya que CompraWindow no tiene un constructor que lo acepte
+            Navegar(() => new CompraWindow().Show());
         }
 
         private void NuevaVenta_Click(object sender, RoutedEventArgs e)
