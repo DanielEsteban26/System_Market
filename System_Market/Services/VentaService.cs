@@ -24,9 +24,9 @@ namespace System_Market.Services
             connection.Open();
             string query = @"
                 SELECT v.Id, v.UsuarioId, v.Fecha, v.Total, v.Estado, v.MotivoAnulacion,
-                       u.Nombre as UsuarioNombre
+                       IFNULL(u.Nombre, '') as UsuarioNombre
                 FROM Ventas v
-                JOIN Usuarios u ON v.UsuarioId = u.Id";
+                LEFT JOIN Usuarios u ON v.UsuarioId = u.Id";
             using var cmd = new SQLiteCommand(query, connection);
             using var reader = cmd.ExecuteReader();
             while (reader.Read())
@@ -39,7 +39,7 @@ namespace System_Market.Services
                     Total = reader.GetDecimal(3),
                     Estado = reader.GetString(4),
                     MotivoAnulacion = reader.IsDBNull(5) ? "" : reader.GetString(5),
-                    UsuarioNombre = reader.GetString(6)
+                    UsuarioNombre = reader.IsDBNull(6) ? "" : reader.GetString(6)
                 });
             }
             return ventas;

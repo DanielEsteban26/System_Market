@@ -75,21 +75,6 @@
                         <TextBlock Text="Buscar"/>
                     </StackPanel>
                 </Button>
-
-                <Button Grid.Column="2"
-                        Padding="14,6"
-                        Margin="8,0,0,0"
-                        Background="{StaticResource BrushBtnPrimary}"
-                        Foreground="White"
-                        Click="BtnRefrescar_Click">
-                    <Button.Style>
-                        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}"/>
-                    </Button.Style>
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE72C;" Margin="0,0,6,0"/>
-                        <TextBlock Text="Refrescar"/>
-                    </StackPanel>
-                </Button>
             </Grid>
         </materialDesign:Card>
 

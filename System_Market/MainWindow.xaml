@@ -158,12 +158,12 @@
                             <Setter Property="Margin" Value="0,0,10,0"/>
                         </Style>
                     </StackPanel.Resources>
-                    <Button Content="Dashboard"
+                    <Button x:Name="btnDashboard" Content="Dashboard"
                             Style="{StaticResource BtnDashboard}"
                             Height="30"
                             Padding="10,4"
                             Click="BtnDashboard_Click"/>
-                    <Button Content="Refrescar"
+                    <Button x:Name="btnRefrescarDashboard" Content="Refrescar"
                             Style="{StaticResource BtnAccent}"
                             Height="30"
                             Padding="10,4"
@@ -212,15 +212,15 @@
             <Border Grid.Column="0" Background="#F8F9FA" BorderBrush="#D9DEE2" BorderThickness="0,0,1,0">
                 <StackPanel Margin="14">
                     <TextBlock Text="Menú" FontWeight="SemiBold" Foreground="#546E7A" Margin="2,4,2,12"/>
-                    <Button Content="Productos" Style="{StaticResource BtnProductos}" Click="BtnProductos_Click" Margin="0,0,0,6"/>
-                    <Button Content="Ventas" Style="{StaticResource BtnVentas}" Click="BtnVentas_Click" Margin="0,0,0,6"/>
-                    <Button Content="Compras" Style="{StaticResource BtnCompras}" Click="BtnCompras_Click" Margin="0,0,0,6"/>
-                    <Button Content="Proveedores" Style="{StaticResource BtnProveedores}" Click="BtnProveedores_Click" Margin="0,0,0,6"/>
-                    <Button Content="Usuarios" Style="{StaticResource BtnUsuarios}" Click="BtnUsuarios_Click" Margin="0,0,0,6"/>
-                    <Button Content="Categorías" Style="{StaticResource BtnCategorias}" Click="BtnCategorias_Click" Margin="0,6,0,6"/>
+                    <Button x:Name="btnProductos" Content="Productos" Style="{StaticResource BtnProductos}" Click="BtnProductos_Click" Margin="0,0,0,6"/>
+                    <Button x:Name="btnVentas" Content="Ventas" Style="{StaticResource BtnVentas}" Click="BtnVentas_Click" Margin="0,0,0,6"/>
+                    <Button x:Name="btnCompras" Content="Compras" Style="{StaticResource BtnCompras}" Click="BtnCompras_Click" Margin="0,0,0,6"/>
+                    <Button x:Name="btnProveedores" Content="Proveedores" Style="{StaticResource BtnProveedores}" Click="BtnProveedores_Click" Margin="0,0,0,6"/>
+                    <Button x:Name="btnUsuarios" Content="Usuarios" Style="{StaticResource BtnUsuarios}" Click="BtnUsuarios_Click" Margin="0,0,0,6"/>
+                    <Button x:Name="btnCategorias" Content="Categorías" Style="{StaticResource BtnCategorias}" Click="BtnCategorias_Click" Margin="0,6,0,6"/>
                     <Separator/>
-                    <Button Content="Reportes" Style="{StaticResource BtnReportes}" Click="BtnReportes_Click" Margin="0,0,0,6"/>
-                    <Button Content="Acerca de" Style="{StaticResource BtnAbout}" Click="BtnAbout_Click" Margin="0,0,0,6"/>
+                    <Button x:Name="btnReportes" Content="Reportes" Style="{StaticResource BtnReportes}" Click="BtnReportes_Click" Margin="0,0,0,6"/>
+                    <Button x:Name="btnAbout" Content="Acerca de" Style="{StaticResource BtnAbout}" Click="BtnAbout_Click" Margin="0,0,0,6"/>
                 </StackPanel>
             </Border>
 

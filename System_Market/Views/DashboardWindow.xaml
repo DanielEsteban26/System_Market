@@ -257,7 +257,7 @@
             <materialDesign:Card Grid.Column="2" Style="{StaticResource CardFilter}" Margin="0,0,12,0">
                 <DockPanel>
                     <TextBlock Text="Usuarios" DockPanel.Dock="Top" FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,4"/>
-                    <ComboBox x:Name="cbSucursal" DisplayMemberPath="Nombre" SelectedValuePath="Id" SelectionChanged="FiltroSucursal_Changed"/>
+                    <ComboBox x:Name="cbUsuario" DisplayMemberPath="Nombre" SelectedValuePath="Id" SelectionChanged="FiltroUsuario_Changed"/>
                 </DockPanel>
             </materialDesign:Card>
 

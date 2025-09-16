@@ -34,10 +34,7 @@ namespace System_Market.Views
         private Producto? _productoConEseCodigo;
         private bool _codigoExiste;
 
-        public ProductoEdicionWindow(string connectionString,
-                                     Producto producto = null,
-                                     string codigoPrefill = null,
-                                     bool bloquearCodigo = false)
+        public ProductoEdicionWindow(string connectionString, Producto producto = null, string codigoPrefill = null, bool bloquearCodigo = false)
         {
             InitializeComponent();
             _categoriaService = new CategoriaService(connectionString);
@@ -175,50 +172,68 @@ namespace System_Market.Views
                 return;
             }
 
-            // 1) Buscar en índice
-            _indexProductos.TryGetValue(codigo, out var existente);
+            Producto? existente = null;
 
-            // 2) Si no, intento directo BD (por si se creó recientemente en otra ventana)
+            // Construir variantes de búsqueda (normal, sin ceros y padded EAN13)
+            var variantes = new List<string> { codigo };
+            var sinCeros = RemoverCerosIzquierda(codigo);
+            if (!string.IsNullOrEmpty(sinCeros) && !variantes.Contains(sinCeros)) variantes.Add(sinCeros);
+            var pad13 = PadEAN13(sinCeros);
+            if (!string.IsNullOrEmpty(pad13) && !variantes.Contains(pad13)) variantes.Add(pad13);
+
+            // 1) Buscar en índice por cualquiera de las variantes
+            foreach (var v in variantes)
+            {
+                if (_indexProductos.TryGetValue(v, out existente))
+                    break;
+            }
+
+            // 2) Si no encontrado, intento directo en BD para cada variante
             if (existente == null)
             {
-                var directo = _productoService.ObtenerPorCodigoBarras(codigo);
-                if (directo != null)
+                foreach (var v in variantes)
                 {
-                    existente = directo;
-                    // Actualizar índice
-                    _indexProductos[codigo] = directo;
-#if DEBUG
-                    Debug.WriteLine($"[ProductoEdicion] Encontrado por consulta directa: {codigo} -> {directo.Nombre}");
-#endif
+                    var directo = _productoService.ObtenerPorCodigoBarras(v);
+                    if (directo != null)
+                    {
+                        existente = directo;
+                        // actualizar índice para futuras búsquedas
+                        try { _indexProductos[v] = directo; } catch { }
+                        break;
+                    }
                 }
             }
 
-            // 3) Fallback final: enumerar (muy raro que llegue aquí si índice está bien)
+            // 3) Fallback: enumerar todos y comparar normalizado (por si hay otros formatos)
             if (existente == null)
             {
-                var lista = _productoService.ObtenerTodos();
-                existente = lista.FirstOrDefault(p =>
-                    !string.IsNullOrWhiteSpace(p.CodigoBarras) &&
-                    NormalizarCodigo(p.CodigoBarras) == codigo);
-                if (existente != null)
+                try
                 {
-                    _indexProductos[codigo] = existente;
-#if DEBUG
-                    Debug.WriteLine($"[ProductoEdicion] Encontrado en fallback enumerado: {codigo} -> {existente.Nombre}");
-#endif
+                    var lista = _productoService.ObtenerTodos();
+                    existente = lista.FirstOrDefault(p =>
+                        !string.IsNullOrWhiteSpace(p.CodigoBarras) &&
+                        NormalizarCodigo(p.CodigoBarras) == codigo);
+                    if (existente != null)
+                    {
+                        try { _indexProductos[codigo] = existente; } catch { }
+                    }
+                }
+                catch
+                {
+                    // ignorar
                 }
             }
 
+            // Si existe y no es el mismo registro cuando estamos en edición -> marcado de duplicado
             if (existente != null && (!_esEdicion || existente.Id != (Producto?.Id ?? 0)))
             {
-                // No mostrar MessageBox aquí: solo resaltar y actualizar estado
                 txtCodigoBarras.BorderBrush = Brushes.OrangeRed;
                 txtCodigoBarras.ToolTip = $"Código ya usado por: {existente.Nombre} (ID {existente.Id})";
                 ActualizarEstadoCodigo($"Código USADO por: {existente.Nombre} (ID {existente.Id})", Brushes.OrangeRed);
 
                 _productoConEseCodigo = existente;
                 _codigoExiste = true;
-                _mostroDuplicado = true; // marca para saber que hay duplicado visualmente
+                _mostroDuplicado = true;
             }
             else
             {
@@ -227,9 +242,6 @@ namespace System_Market.Views
                 _productoConEseCodigo = null;
                 _codigoExiste = false;
                 ActualizarEstadoCodigo("Código libre", Brushes.LightGreen);
-#if DEBUG
-                Debug.WriteLine($"[ProductoEdicion] Código libre: {codigo}");
-#endif
             }
 
             _ultimoCodigoVerificado = codigo;
@@ -254,25 +266,13 @@ namespace System_Market.Views
             var codigo = NormalizarCodigo(txtCodigoBarras.Text);
             if (string.IsNullOrEmpty(codigo))
             {
-                MessageBox.Show("Código de barras inválido.", "Aviso",
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                ActualizarEstadoCodigo("Código de barras inválido.", Brushes.OrangeRed);
+                txtCodigoBarras.Focus();
+                txtCodigoBarras.SelectAll();
                 return;
             }
 
-            // Validación básica de otros campos
-            if (string.IsNullOrWhiteSpace(txtNombre.Text) ||
-                cbCategoria.SelectedValue == null ||
-                cbProveedor.SelectedValue == null ||
-                !decimal.TryParse(txtPrecioCompra.Text, NumberStyles.Number, CultureInfo.InvariantCulture, out decimal precioCompra) ||
-                !decimal.TryParse(txtPrecioVenta.Text, NumberStyles.Number, CultureInfo.InvariantCulture, out decimal precioVenta) ||
-                !int.TryParse(txtStock.Text, out int stock))
-            {
-                MessageBox.Show("Complete todos los campos correctamente.", "Aviso",
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            // Unicidad: si detectamos un producto distinto con ese código, impedir guardar
+            // Unicidad: si detectamos un producto distinto con ese código, impedir guardar (modal)
             if (_codigoExiste && (_esEdicion == false || (_productoConEseCodigo?.Id ?? 0) != (Producto?.Id ?? 0)))
             {
                 MessageBox.Show($"No se puede guardar. El código ya pertenece a '{_productoConEseCodigo?.Nombre}' (ID {_productoConEseCodigo?.Id}).",
@@ -281,6 +281,91 @@ namespace System_Market.Views
                 txtCodigoBarras.SelectAll();
                 return;
             }
+
+            // Validación por campos: NOTIFICACIONES INLINE en lugar de modal
+            if (string.IsNullOrWhiteSpace(txtNombre.Text))
+            {
+                ActualizarEstadoCodigo("Complete el nombre del producto.", Brushes.OrangeRed);
+                txtNombre.Focus();
+                return;
+            }
+
+            if (cbCategoria.SelectedValue == null)
+            {
+                ActualizarEstadoCodigo("Seleccione una categoría.", Brushes.OrangeRed);
+                cbCategoria.Focus();
+                return;
+            }
+
+            if (cbProveedor.SelectedValue == null)
+            {
+                ActualizarEstadoCodigo("Seleccione un proveedor.", Brushes.OrangeRed);
+                cbProveedor.Focus();
+                return;
+            }
+
+            if (!decimal.TryParse(txtPrecioCompra.Text, NumberStyles.Number, CultureInfo.InvariantCulture, out decimal precioCompra) || precioCompra < 0)
+            {
+                ActualizarEstadoCodigo("Ingrese un precio de compra válido.", Brushes.OrangeRed);
+                txtPrecioCompra.Focus();
+                txtPrecioCompra.SelectAll();
+                return;
+            }
+
+            if (!decimal.TryParse(txtPrecioVenta.Text, NumberStyles.Number, CultureInfo.InvariantCulture, out decimal precioVenta) || precioVenta < 0)
+            {
+                ActualizarEstadoCodigo("Ingrese un precio de venta válido.", Brushes.OrangeRed);
+                txtPrecioVenta.Focus();
+                txtPrecioVenta.SelectAll();
+                return;
+            }
+
+            if (!int.TryParse(txtStock.Text, out int stock) || stock < 0)
+            {
+                ActualizarEstadoCodigo("Ingrese una cantidad de stock válida.", Brushes.OrangeRed);
+                txtStock.Focus();
+                txtStock.SelectAll();
+                return;
+            }
+
+            // --- CONFIRMACIÓN DE CAMBIOS EN EDICIÓN ---
+            if (_esEdicion && Producto != null)
+            {
+                var cambios = "";
+                if (Producto.CodigoBarras != codigo)
+                    cambios += $"- Código de barras: '{Producto.CodigoBarras}' → '{codigo}'\n";
+                if (Producto.Nombre != txtNombre.Text.Trim())
+                    cambios += $"- Nombre: '{Producto.Nombre}' → '{txtNombre.Text.Trim()}'\n";
+                if (Producto.CategoriaId != (int)cbCategoria.SelectedValue)
+                {
+                    var catAnt = (cbCategoria.ItemsSource as IEnumerable<Categoria>)?.FirstOrDefault(c => c.Id == Producto.CategoriaId)?.Nombre ?? "";
+                    var catNue = (cbCategoria.SelectedItem as Categoria)?.Nombre ?? "";
+                    cambios += $"- Categoría: '{catAnt}' → '{catNue}'\n";
+                }
+                if (Producto.ProveedorId != (int)cbProveedor.SelectedValue)
+                {
+                    var provAnt = (cbProveedor.ItemsSource as IEnumerable<Proveedor>)?.FirstOrDefault(p => p.Id == Producto.ProveedorId)?.Nombre ?? "";
+                    var provNue = (cbProveedor.SelectedItem as Proveedor)?.Nombre ?? "";
+                    cambios += $"- Proveedor: '{provAnt}' → '{provNue}'\n";
+                }
+                if (Producto.PrecioCompra != precioCompra)
+                    cambios += $"- Precio de compra: {Producto.PrecioCompra} → {precioCompra}\n";
+                if (Producto.PrecioVenta != precioVenta)
+                    cambios += $"- Precio de venta: {Producto.PrecioVenta} → {precioVenta}\n";
+                if (Producto.Stock != stock)
+                    cambios += $"- Stock: {Producto.Stock} → {stock}\n";
+
+                if (!string.IsNullOrWhiteSpace(cambios))
+                {
+                    var msg = "¿Confirma los siguientes cambios?\n\n" + cambios;
+                    var result = MessageBox.Show(msg, "Confirmar actualización", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                    if (result != MessageBoxResult.Yes)
+                        return;
+                }
+            }
+
+            // Todo OK: limpiar estado y aceptar
+            ActualizarEstadoCodigo("Listo", Brushes.LightGreen);
 
             Producto ??= new Producto();
             Producto.CodigoBarras = codigo;
@@ -291,16 +376,15 @@ namespace System_Market.Views
             Producto.PrecioVenta = precioVenta;
             Producto.Stock = stock;
 
-            if (Producto.Stock < 0)
-            {
-                MessageBox.Show("El stock no puede ser negativo.", "Aviso",
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
             DialogResult = true;
         }
 
         private void BtnCancelar_Click(object sender, RoutedEventArgs e) => DialogResult = false;
+
+        public void CargarDatosDesdeCodigoBarras(string codigo)
+        {
+            txtCodigoBarras.Text = codigo;
+            // Puedes agregar más lógica si lo necesitas
+        }
     }
 }

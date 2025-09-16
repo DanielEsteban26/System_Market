@@ -1,4 +1,4 @@
-﻿using System;
+﻿using System.Text;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -20,13 +20,17 @@ namespace System_Market.Views
         private readonly VentaService ventaService;
         private ObservableCollection<DetalleVenta> detalleVenta;
 
-        private int usuarioId = 1;
+        // Ya no inicializamos a 1 por defecto; tomamos el Id del usuario en sesión en el constructor.
+        private int usuarioId;
         private bool _codigoBloqueado;
 
         private const int MinManualCodeLength = 3;
         private readonly SnackbarMessageQueue _snackbarQueue = new(TimeSpan.FromSeconds(2));
 
         private string? _ultimoCodigoEscaneado;
+
+        // --- NUEVO: timestamp del último código procesado para evitar duplicados rápidos ---
+        private DateTime _ultimoCodigoEscaneadoTime = DateTime.MinValue;
 
         // Cache / control carga
         private Dictionary<string, Producto> _cacheProductosPorCodigo = new(StringComparer.OrdinalIgnoreCase);
@@ -47,12 +51,13 @@ namespace System_Market.Views
             BloquearEdicionCodigo();
             txtCodigoBarra.Clear();
 
+            // Establecer usuario actual (si hay sesión)
+            usuarioId = System_Market.Models.SesionActual.Usuario?.Id ?? 1;
+
             // Escaneos que ocurrieron SIN ventana de ventas abierta
             DrenarEscaneosPendientes();
 
-            // Replay rápido de último código (si fue justo antes)
-            BarcodeScannerService.TryReplayLastCodeFor(this, TimeSpan.FromSeconds(3));
-
+            // NOTE: TryReplay moved to Loaded to avoid double-add when constructor overload provides an initial code.
             Loaded += VentaWindow_Loaded;
             Activated += VentaWindow_Activated;
         }
@@ -65,6 +70,14 @@ namespace System_Market.Views
                 if (_codigoBloqueado) BloquearEdicionCodigo();
                 AgregarProductoDesdeCodigo(codigoInicial.Trim(), mostrarMensajes: false);
                 txtCodigoBarra.Clear();
+
+                // Marcar que acabamos de procesar este código (evita replay desde TryReplayLastCodeFor/Loaded)
+                try
+                {
+                    _ultimoCodigoEscaneado = NormalizarCodigoParaBusqueda(codigoInicial);
+                    _ultimoCodigoEscaneadoTime = DateTime.UtcNow;
+                }
+                catch { /* no crítico */ }
             }
         }
 
@@ -96,7 +109,7 @@ namespace System_Market.Views
                 // Si el control no existe por alguna razón, no romper la carga.
             }
 
-            // Re-replay tras tener cache
+            // Replay tras tener cache (solo aquí para evitar doble procesamiento al crear con código inicial)
             BarcodeScannerService.TryReplayLastCodeFor(this, TimeSpan.FromSeconds(3));
 
             if (!_codigoBloqueado)
@@ -133,7 +146,19 @@ namespace System_Market.Views
             var normalizado = NormalizarCodigoParaBusqueda(codigo);
             if (string.IsNullOrEmpty(normalizado)) return;
 
+            // Evitar procesar repetidos muy cercanos en el tiempo (dobles/triples por reentradas)
+            if (!string.IsNullOrEmpty(_ultimoCodigoEscaneado) &&
+                string.Equals(_ultimoCodigoEscaneado, normalizado, StringComparison.OrdinalIgnoreCase) &&
+                (DateTime.UtcNow - _ultimoCodigoEscaneadoTime).TotalMilliseconds < 800)
+            {
+                // Ignorar duplicado rápido
+                return;
+            }
+
+            // NOTA: no filtrar por letras aquí — aceptamos cualquier formato de código.
             _ultimoCodigoEscaneado = normalizado;
+            _ultimoCodigoEscaneadoTime = DateTime.UtcNow;
+
             txtCodigoBarra.Text = normalizado;
             txtCodigoBarra.CaretIndex = normalizado.Length;
 
@@ -147,9 +172,11 @@ namespace System_Market.Views
             }
             else
             {
+                // mostrarMensajes = false: para escaneos automáticos preferimos no mostrar MessageBox modal
                 AgregarProductoDesdeCodigo(normalizado, mostrarMensajes: false);
             }
 
+            // Limpiar el TextBox programáticamente (no afecta al flujo de escaneo)
             txtCodigoBarra.Clear();
         }
 
@@ -395,13 +422,29 @@ namespace System_Market.Views
             {
                 var venta = new Venta
                 {
-                    UsuarioId = usuarioId,
+                    // Aseguramos usar el usuario de la sesión al momento de guardar
+                    UsuarioId = System_Market.Models.SesionActual.Usuario?.Id ?? usuarioId,
                     Fecha = DateTime.Now,
                     Estado = "Activa"
                 };
 
                 int ventaId = ventaService.AgregarVentaConDetalles(venta, detalleVenta.ToList());
-                MessageBox.Show($"Venta registrada (ID: {ventaId}).");
+
+                // Obtener últimas ventas para verificar en qué UsuarioId se guardó
+                var ultimas = ventaService.ObtenerTodas()
+                    .OrderByDescending(v => v.Id)
+                    .Take(5)
+                    .Select(v => $"{v.Id} | UsuarioId={v.UsuarioId} | Usuario='{v.UsuarioNombre}' | Total={v.Total:C} | {v.Fecha:yyyy-MM-dd HH:mm}")
+                    .ToList();
+
+                var info = new StringBuilder();
+                info.AppendLine($"Venta registrada (ID: {ventaId}).");
+                info.AppendLine($"UsuarioId usado al insertar: {venta.UsuarioId}");
+                info.AppendLine("Últimas ventas (desc):");
+                foreach (var l in ultimas) info.AppendLine(l);
+
+                MessageBox.Show(info.ToString(), "Verificación Venta", MessageBoxButton.OK, MessageBoxImage.Information);
+
                 detalleVenta.Clear();
                 ActualizarTotales();
 
@@ -435,7 +478,11 @@ namespace System_Market.Views
         private void BloquearEdicionCodigo()
         {
             _codigoBloqueado = true;
+
+            // Evitar que el TextBox reciba foco o interacción del usuario
             txtCodigoBarra.IsReadOnly = true;
+            txtCodigoBarra.IsHitTestVisible = false; // no recibirá clics ni permitirá selección
+            txtCodigoBarra.Focusable = false;        // no podrá recibir foco por teclado
             txtCodigoBarra.Background = new SolidColorBrush(Color.FromRgb(235, 235, 235));
             txtCodigoBarra.Cursor = Cursors.Arrow;
             txtCodigoBarra.ToolTip = "F2 o 'Editar' para escribir un código manual.";
@@ -444,10 +491,15 @@ namespace System_Market.Views
         private void DesbloquearEdicionCodigo()
         {
             _codigoBloqueado = false;
+
             txtCodigoBarra.IsReadOnly = false;
+            txtCodigoBarra.IsHitTestVisible = true;
+            txtCodigoBarra.Focusable = true;
             txtCodigoBarra.ClearValue(TextBox.BackgroundProperty);
             txtCodigoBarra.Cursor = Cursors.IBeam;
             txtCodigoBarra.ToolTip = null;
+
+            // Poner foco y seleccionar todo para facilitar la edición manual
             txtCodigoBarra.Focus();
             txtCodigoBarra.SelectAll();
         }
@@ -562,6 +614,15 @@ namespace System_Market.Views
                     Subtotal = producto.PrecioVenta
                 });
             }
+
+            // MARCAR código procesado (evita reentrada por replay/pendientes)
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(producto.CodigoBarras))
+                    _ultimoCodigoEscaneado = NormalizarCodigoParaBusqueda(producto.CodigoBarras);
+                _ultimoCodigoEscaneadoTime = DateTime.UtcNow;
+            }
+            catch { /* no crítico */ }
 
             dgDetalleVenta.Items.Refresh();
             ActualizarTotales();

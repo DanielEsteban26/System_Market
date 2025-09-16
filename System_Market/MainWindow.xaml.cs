@@ -60,17 +60,21 @@ namespace System_Market
             icQuickActions.ItemsSource = _accionesRapidas;
             cbAccion.ItemsSource = _catalogoAcciones;
 
-            // Mostrar usuario y rol si se pasó uno
+            // Si se recibió usuario al crear la ventana, guardarlo en la sesión global
             if (usuario != null)
             {
+                System_Market.Models.SesionActual.Usuario = usuario;
                 txtUsuarioActual.Text = usuario.Nombre ?? "Usuario";
                 txtRolUsuario.Text = usuario.Rol ?? txtRolUsuario.Text;
             }
             else
             {
-                // Valor por defecto si no se proporcionó usuario
-                txtUsuarioActual.Text = "Usuario Demo";
+                txtUsuarioActual.Text = System_Market.Models.SesionActual.Usuario?.Nombre ?? "Usuario Demo";
+                txtRolUsuario.Text = System_Market.Models.SesionActual.Usuario?.Rol ?? txtRolUsuario.Text;
             }
+
+            // Aplicar permisos según rol actual (deshabilita botones / filtra acciones)
+            AplicarPermisosMainWindow();
 
             // Cargar acciones guardadas o semillas
             if (!CargarAccionesGuardadas())
@@ -81,7 +85,29 @@ namespace System_Market
                 GuardarAcciones();
             }
 
-            this.Closed += (_, __) => GuardarAcciones();
+            this.Closed += (_, __) => {
+                GuardarAcciones();
+                try
+                {
+                    if (_scannerSuscrito)
+                    {
+                        System_Market.Services.BarcodeScannerService.OnCodeScanned -= HandleScannedCode;
+                        _scannerSuscrito = false;
+                    }
+                }
+                catch { }
+            };
+
+            // Suscribirse al evento del escáner solo una vez
+            try
+            {
+                if (!_scannerSuscrito)
+                {
+                    System_Market.Services.BarcodeScannerService.OnCodeScanned += HandleScannedCode;
+                    _scannerSuscrito = true;
+                }
+            }
+            catch { }
         }
 
         // Este método se llama desde XAML Loaded="Window_Loaded"
@@ -271,7 +297,7 @@ namespace System_Market
         }
 
         // Cerrar sesión: oculta main, muestra login modal y actúa según resultado
-        private void BtnLogout_Click(object sender, RoutedEventArgs e)
+        private async void BtnLogout_Click(object sender, RoutedEventArgs e)
         {
             try
             {
@@ -281,9 +307,18 @@ namespace System_Market
 
                 if (result == true && login.UsuarioLogueado != null)
                 {
+                    // Guardar sesión global
+                    System_Market.Models.SesionActual.Usuario = login.UsuarioLogueado;
+
+                    // Actualizar UI
                     txtUsuarioActual.Text = login.UsuarioLogueado.Nombre;
                     txtRolUsuario.Text = login.UsuarioLogueado.Rol ?? txtRolUsuario.Text;
-                    _ = RefreshAsync();
+
+                    // Aplicar permisos según nuevo usuario
+                    AplicarPermisosMainWindow();
+
+                    // Refrescar datos y mostrar
+                    await RefreshAsync();
                     this.Show();
                 }
                 else
@@ -297,6 +332,165 @@ namespace System_Market
                 Application.Current.Shutdown();
             }
         }
+
+        private void AplicarPermisosMainWindow()
+        {
+            var admin = System_Market.Models.SesionActual.EsAdministrador();
+
+            // Habilitar/inhabilitar botones del menú (compras, usuarios, proveedores, categorías, reportes)
+            // Verificamos null por si XAML no contiene el control (seguro)
+            try { btnUsuarios.IsEnabled = admin; } catch { }
+            try { btnCompras.IsEnabled = admin; } catch { }
+            try { btnProveedores.IsEnabled = admin; } catch { }
+            try { btnCategorias.IsEnabled = admin; } catch { }
+            try { btnReportes.IsEnabled = admin; } catch { }
+
+            // Opcional: si no admin, ocultar botón de "Usuarios" por claridad
+            try { btnUsuarios.Visibility = admin ? Visibility.Visible : Visibility.Collapsed; } catch { }
+
+            // Filtrar catálogo de acciones rápidas para cajero
+            if (!admin)
+            {
+                var permitidas = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    "NuevaVenta",
+                    "AgregarProducto",
+                    "Ventas"
+                };
+
+                _catalogoAcciones.RemoveAll(a => !permitidas.Contains(a.Clave));
+
+                // Limpiar acciones rápidas guardadas que no estén permitidas
+                for (int i = _accionesRapidas.Count - 1; i >= 0; i--)
+                {
+                    if (!_catalogoAcciones.Any(c => c.Clave == _accionesRapidas[i].Clave))
+                        _accionesRapidas.RemoveAt(i);
+                }
+
+                // Refrescar ComboBox catálogo
+                try { cbAccion.ItemsSource = null; cbAccion.ItemsSource = _catalogoAcciones; }
+                catch { }
+            }
+        }
+
+        // Maneja invocación desde el servicio de escáner (asegura ejecución en hilo UI)
+        public void HandleScannedCode(string codigo)
+        {
+            // Solo procesar si MainWindow está activa y visible
+            if (!this.IsActive || !this.IsVisible)
+                return;
+
+            if (string.IsNullOrWhiteSpace(codigo)) return;
+
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                try
+                {
+                    ProcesarCodigoBarras(codigo.Trim());
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error procesando escaneo: " + ex.Message, "Escáner",
+                        MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+            }), System.Windows.Threading.DispatcherPriority.Normal);
+        }
+
+        private Queue<string> _pendingVentaCodes = new Queue<string>();
+
+        private void ProcesarCodigoBarras(string codigo)
+        {
+            if (string.IsNullOrWhiteSpace(codigo)) return;
+
+            var producto = _productoService.ObtenerPorCodigoBarras(codigo);
+            bool existeProducto = producto != null;
+
+            // Determinar rol / permisos
+            var rol = System_Market.Models.SesionActual.Usuario?.Rol ?? string.Empty;
+            var esAdmin = System_Market.Models.SesionActual.EsAdministrador();
+            var esCajero = !esAdmin && (string.Equals(rol, "Cajero", StringComparison.OrdinalIgnoreCase)
+                                        || string.Equals(rol, "Cajera", StringComparison.OrdinalIgnoreCase));
+
+            // Regla: si es cajero/cajera y el producto existe -> ir directo a venta (sin modal)
+            if (esCajero && existeProducto)
+            {
+                try
+                {
+                    new VentaWindow(codigo).ShowDialog();
+                    _ = RefreshAsync();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error abriendo ventana de venta: " + ex.Message, "Venta",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+                return;
+            }
+
+            // Mostrar modal con las opciones (CodeActionDialogWindow ya controla visibilidad según rol y existencia)
+            var dlg = new CodeActionDialogWindow(codigo, existeProducto, rol) { Owner = this };
+            if (dlg.ShowDialog() != true) return;
+
+            bool handled = false;
+            try
+            {
+                switch (dlg.OpcionSeleccionada)
+                {
+                    case CodeActionDialogWindow.OpcionSeleccionadaEnum.Venta:
+                        new VentaWindow(codigo).ShowDialog();
+                        handled = true;
+                        break;
+
+                    case CodeActionDialogWindow.OpcionSeleccionadaEnum.Compra:
+                        new CompraWindow(codigo).ShowDialog();
+                        handled = true;
+                        break;
+
+                    case CodeActionDialogWindow.OpcionSeleccionadaEnum.Crear:
+                        var win = new ProductoEdicionWindow(_conn, producto: null, codigoPrefill: codigo, bloquearCodigo: true)
+                        {
+                            Owner = this,
+                            WindowStartupLocation = WindowStartupLocation.CenterOwner
+                        };
+                        if (win.ShowDialog() == true && win.Producto != null)
+                        {
+                            _productoService.AgregarProducto(win.Producto);
+                            handled = true;
+                        }
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error ejecutando operación: " + ex.Message, "Operación",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                // 5) Si ninguna ventana especializada está activa, invoca MainWindow.HandleScannedCode
+                if (!handled)
+                {
+                    var mainWin = Application.Current.Windows
+                        .OfType<System_Market.MainWindow>()
+                        .FirstOrDefault(w => w.IsVisible);
+
+                    if (mainWin != null)
+                    {
+                        mainWin.HandleScannedCode(codigo);
+                        handled = true;
+                    }
+                    else
+                    {
+                        // Si por alguna razón no hay MainWindow, encola para futura venta
+                        if (_pendingVentaCodes.Count > 5) _pendingVentaCodes.Dequeue();
+                        _pendingVentaCodes.Enqueue(codigo);
+                    }
+                }
+                _ = RefreshAsync();
+            }
+        }
+
+        private static bool _scannerSuscrito = false;
 
         private record AccionDef(string Clave, string Titulo, string Icono);
 

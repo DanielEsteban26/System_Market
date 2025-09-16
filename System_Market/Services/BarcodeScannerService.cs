@@ -36,6 +36,13 @@ namespace System_Market.Services
         // Evento opcional (si alguna vista quiere engancharse)
         public static event Action<string>? CodeScanned;
 
+        // Agrega este evento público a la clase BarcodeScannerService
+        public static event Action<string>? OnCodeScanned
+        {
+            add { CodeScanned += value; }
+            remove { CodeScanned -= value; }
+        }
+
         private static readonly Queue<string> _pendingVentaCodes = new();   // cola simple (UI thread)
 
         public static void Start()
@@ -190,14 +197,30 @@ namespace System_Market.Services
                     }
                 }
 
-                // 5) Cola pendiente para futura Venta
+                // 5) Si ninguna ventana especializada está activa, invoca MainWindow.HandleScannedCode
                 if (!handled)
                 {
-                    if (_pendingVentaCodes.Count > 5) _pendingVentaCodes.Dequeue();
-                    _pendingVentaCodes.Enqueue(code);
+                    var mainWin = Application.Current.Windows
+                        .OfType<System_Market.MainWindow>()
+                        .FirstOrDefault(w => w.IsVisible);
+
+                    if (mainWin != null)
+                    {
+                        mainWin.HandleScannedCode(code);
+                        handled = true;
+                    }
+                    else
+                    {
+                        if (_pendingVentaCodes.Count > 5) _pendingVentaCodes.Dequeue();
+                        _pendingVentaCodes.Enqueue(code);
+                    }
                 }
 
-                CodeScanned?.Invoke(code);
+                // Solo notificar suscriptores generales si NO fue manejado ya por una ventana especializada
+                if (!handled)
+                {
+                    CodeScanned?.Invoke(code);
+                }
 
                 if (EnableDebug)
                     Debug.WriteLine($"[Scanner] Code='{code}' handled={handled}");

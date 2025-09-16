@@ -8,6 +8,13 @@ namespace System_Market.Models
 {
     public static class SesionActual
     {
-        public static Usuario Usuario { get; set; }  
+        // Nullable para evitar problemas antes del login
+        public static Usuario? Usuario { get; set; }
+
+        public static bool EsAdministrador()
+            => Usuario?.Rol != null && string.Equals(Usuario.Rol, "Administrador", StringComparison.OrdinalIgnoreCase);
+
+        public static bool EsCajero()
+            => Usuario?.Rol != null && string.Equals(Usuario.Rol, "Cajero", StringComparison.OrdinalIgnoreCase);
     }
 }

@@ -83,7 +83,6 @@ namespace System_Market.Views
             _conn = DatabaseInitializer.GetConnectionString();
             _productoService = new ProductoService(_conn);
             _ventaService = new VentaService(_conn);
-            _compra_service: _compraService = new CompraService(_conn); // placeholder to keep style
             _compraService = new CompraService(_conn);
             _categoriaService = new CategoriaService(_conn);
             _usuarioService = new UsuarioService(_conn);
@@ -95,7 +94,7 @@ namespace System_Market.Views
 
             CargarPresetsRangoFecha();
             CargarCategorias();
-            CargarSucursalesPlaceholder(); // ahora carga usuarios en el combo de sucursal
+            CargarUsuariosPlaceholder(); // ahora carga usuarios en el combo
 
             if (!CargarAccionesGuardadas())
             {
@@ -113,6 +112,9 @@ namespace System_Market.Views
             // Preferir el usuario de la sesión si está disponible, si no usar el valor pasado al constructor
             var nombreSesion = System_Market.Models.SesionActual.Usuario?.Nombre;
             txtUsuarioActual.Text = !string.IsNullOrWhiteSpace(nombreSesion) ? nombreSesion : _usuarioActualNombre;
+
+            // Aplicar permisos según rol (filtra catálogo/acciones y bloquea controles no permitidos)
+            AplicarPermisos();
 
             BarcodeScannerService.Start();
             AplicarPresetSeleccionado(false);
@@ -134,7 +136,7 @@ namespace System_Market.Views
                 await CargarTodoAsync();
         }
         private async void FiltroCategoria_Changed(object sender, SelectionChangedEventArgs e) => await CargarTodoAsync();
-        private async void FiltroSucursal_Changed(object sender, SelectionChangedEventArgs e) => await CargarTodoAsync();
+        private async void FiltroUsuario_Changed(object sender, SelectionChangedEventArgs e) => await CargarTodoAsync();
 
         private void CargarPresetsRangoFecha()
         {
@@ -264,7 +266,7 @@ namespace System_Market.Views
                 MaxCantidadTop = top.Any() ? top.Max(t => t.Cantidad) : 1;
                 lvTopVendidos.ItemsSource = top;
 
-                ConstruirOrdenesRecientes(ventasTodas);
+                ConstruirOrdenesRecientes(ventasRango);
                 ConstruirEvolucionVentas(ventasRango, desde, hasta);
                 ConstruirDistribucionCategorias(desde, hasta, categoriaId);
                 ConstruirIngresosGastos(totalVentasRango, totalComprasRango);
@@ -282,14 +284,18 @@ namespace System_Market.Views
             finally { MostrarOverlay(false); }
         }
 
-        private void ConstruirOrdenesRecientes(List<Venta> ventasTodas)
+        private void ConstruirOrdenesRecientes(List<Venta> ventas, bool respetarRango = true)
         {
             OrdenesRecientes.Clear();
-            foreach (var v in ventasTodas.OrderByDescending(v => v.Fecha).Take(25))
+            var fuente = ventas.OrderByDescending(v => v.Fecha);
+            if (!respetarRango)
             {
-                string cliente =
-                    (v.GetType().GetProperty("ClienteNombre")?.GetValue(v) as string)?.Trim()
-                    ?? (v.UsuarioNombre ?? "");
+                // si quieres las últimas 25 del total independiente del rango,
+                // obtén las ventas sin filtrar por fecha (llama al servicio) y asigna fuente = ...
+            }
+            foreach (var v in fuente.Take(25))
+            {
+                string cliente = (v.GetType().GetProperty("ClienteNombre")?.GetValue(v) as string)?.Trim() ?? (v.UsuarioNombre ?? "");
                 OrdenesRecientes.Add(new OrdenRecienteDTO
                 {
                     Fecha = FormatearFechaCorta(v.Fecha),
@@ -509,8 +515,8 @@ namespace System_Market.Views
             txtGastosMonto.Text = "S/ " + compras.ToString("N2");
         }
 
-        // Sucursal por defecto = "Todas"
-        private void CargarSucursalesPlaceholder()
+        // Cargar combo de usuarios (opción "Todas")
+        private void CargarUsuariosPlaceholder()
         {
             try
             {
@@ -519,16 +525,16 @@ namespace System_Market.Views
                     .Select(u => new { Id = u.Id, Nombre = u.Nombre })
                     .ToList();
 
-                cbSucursal.ItemsSource = new List<object> { new { Id = 0, Nombre = "Todas" } }
+                cbUsuario.ItemsSource = new List<object> { new { Id = 0, Nombre = "Todas" } }
                     .Concat(usuarios)
                     .ToList();
 
-                cbSucursal.SelectedValue = 0;
+                cbUsuario.SelectedValue = 0;
             }
             catch
             {
-                cbSucursal.ItemsSource = new List<object> { new { Id = 0, Nombre = "Todas" } };
-                cbSucursal.SelectedValue = 0;
+                cbUsuario.ItemsSource = new List<object> { new { Id = 0, Nombre = "Todas" } };
+                cbUsuario.SelectedValue = 0;
             }
         }
 
@@ -742,7 +748,7 @@ private void ConstruirHeatmapHoras(List<Venta> ventasRango)
             cbCategoria.SelectedValue is int id && id > 0 ? id : null;
 
         private int? ObtenerUsuarioSeleccionada() =>
-            cbSucursal.SelectedValue is int id && id > 0 ? id : null;
+            cbUsuario.SelectedValue is int id && id > 0 ? id : null;
 
         private HashSet<int> ObtenerVentaIdsPorCategoria(int categoriaId)
         {
@@ -824,10 +830,18 @@ private void ConstruirHeatmapHoras(List<Venta> ventasRango)
             if (e.Key == Key.Enter) { ExportarVentasResumenCsv(); e.Handled = true; }
         }
 
+        // Reemplaza ExportarVentasResumenCsv por esta versión (valida permisos antes de exportar)
         private void ExportarVentasResumenCsv()
         {
             try
             {
+                // Validar rol
+                if (!EsAdministrador())
+                {
+                    MessageBox.Show("No tiene permisos para exportar.", "Acceso denegado", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
                 var r = ObtenerRango(); if (r == null) return;
                 var (desde, hasta) = r.Value;
                 int? categoriaId = ObtenerCategoriaSeleccionada();
@@ -844,9 +858,9 @@ private void ConstruirHeatmapHoras(List<Venta> ventasRango)
                     {USER_FILTER}
                     ORDER BY v.Fecha;";
                 sql = sql.Replace("{CAT_FILTER}", categoriaId is > 0 ? @"AND EXISTS(
-                                SELECT 1 FROM DetalleVentas dv
-                                INNER JOIN Productos p2 ON p2.Id=dv.ProductoId
-                                WHERE dv.VentaId=v.Id AND p2.CategoriaId=@Cat)" : "");
+                            SELECT 1 FROM DetalleVentas dv
+                            INNER JOIN Productos p2 ON p2.Id=dv.ProductoId
+                            WHERE dv.VentaId=v.Id AND p2.CategoriaId=@Cat)" : "");
                 sql = sql.Replace("{USER_FILTER}", usuarioId is > 0 ? "AND v.UsuarioId=@Usr" : "");
 
                 using var cmd = new SQLiteCommand(sql, cn);
@@ -1053,5 +1067,56 @@ private void ConstruirHeatmapHoras(List<Venta> ventasRango)
                 cbCategoria.SelectedIndex = 0;
             }
         }
+
+        // Añadir helper para comprobar rol (colócalo junto a otros utilitarios en la clase)
+        private static bool EsAdministrador()
+        {
+            var rol = System_Market.Models.SesionActual.Usuario?.Rol;
+            return !string.IsNullOrWhiteSpace(rol) && string.Equals(rol, "Administrador", StringComparison.OrdinalIgnoreCase);
+        }
+
+// Añade este método nuevo que aplica las restricciones (colócalo en la región utilidades o cerca del constructor)
+private void AplicarPermisos()
+{
+    bool admin = EsAdministrador();
+
+    // 1) Controls: si no es admin, bloquear selección de usuario (cajero solo ve sus propias ventas)
+    if (!admin)
+    {
+        cbUsuario.IsEnabled = false;
+        var usuarioSesion = System_Market.Models.SesionActual.Usuario;
+        if (usuarioSesion != null)
+            cbUsuario.SelectedValue = usuarioSesion.Id;
+    }
+    else
+    {
+        cbUsuario.IsEnabled = true;
+    }
+
+    // 2) Filtrar catálogo de acciones rápidas para cajero
+    if (!admin)
+    {
+        var permitidas = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "NuevaVenta",
+            "AgregarProducto",
+            "Ventas"
+        };
+
+        // Filtrar catálogo (remueve entradas no permitidas)
+        _catalogoAcciones.RemoveAll(a => !permitidas.Contains(a.Clave));
+
+        // Quitar acciones rápidas guardadas que no estén permitidas
+        for (int i = _accionesRapidas.Count - 1; i >= 0; i--)
+        {
+            if (!_catalogoAcciones.Any(c => c.Clave == _accionesRapidas[i].Clave))
+                _accionesRapidas.RemoveAt(i);
+        }
+
+        // Refrescar ComboBox si está inicializado
+        try { cbAccion.ItemsSource = null; cbAccion.ItemsSource = _catalogoAcciones; }
+        catch { /* no crítico */ }
+    }
+}
     }
 }
