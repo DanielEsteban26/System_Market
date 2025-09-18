@@ -168,7 +168,17 @@ namespace System_Market.Views
                 var h = (dpHasta.SelectedDate ?? DateTime.Today).Date.AddDays(1).AddTicks(-1);
                 return (d, h);
             }));
-            cbRangoFecha.SelectedValue = "ULT7";
+
+            // Asegurar que el combo tiene seleccionada la primera opción (ULT7)
+            try
+            {
+                cbRangoFecha.SelectedIndex = 0;
+            }
+            catch
+            {
+                // no crítico si el combo aún no está inicializado
+                cbRangoFecha.SelectedValue = "ULT7";
+            }
         }
 
         private void AplicarPresetSeleccionado(bool actualizarPickers)
@@ -200,40 +210,173 @@ namespace System_Market.Views
                 int? categoriaId = ObtenerCategoriaSeleccionada();
                 int? usuarioId = ObtenerUsuarioSeleccionada();
 
-                var productosTask = Task.Run(_productoService.ObtenerTodos);
-                var ventasTask = Task.Run(_ventaService.ObtenerTodas);
-                var comprasTask = Task.Run(_compraService.ObtenerTodas);
-                await Task.WhenAll(productosTask, ventasTask, comprasTask);
+                // Cargar productos en memoria (usado para stock y nombres)
+                var productos = await Task.Run(_productoService.ObtenerTodos);
 
-                var productos = productosTask.Result;
-                var ventasTodas = ventasTask.Result.Where(v => v.Estado == "Activa").ToList();
-                var comprasTodas = comprasTask.Result.Where(c => c.Estado == "Activa").ToList();
+                decimal totalVentasRango = 0m;
+                decimal totalComprasRango = 0m;
+                decimal costoVentas = 0m;
+                var ventasRango = new List<Venta>();
 
-                if (categoriaId is > 0)
+                using (var cn = new SQLiteConnection(_conn))
                 {
-                    var ventaIds = ObtenerVentaIdsPorCategoria(categoriaId.Value);
-                    ventasTodas = ventasTodas.Where(v => ventaIds.Contains(v.Id)).ToList();
+                    cn.Open();
 
-                    var compraIds = ObtenerCompraIdsPorCategoria(categoriaId.Value);
-                    comprasTodas = comprasTodas.Where(c => compraIds.Contains(c.Id)).ToList();
+                    // Construir ventasRango: si hay filtro de categoría, sumar SOLO los detalles de esa categoría por venta.
+                    if (categoriaId is > 0)
+                    {
+                        var sqlVentasPorCat = @"
+                            SELECT v.Id, v.UsuarioId, v.Fecha,
+                                   IFNULL(SUM(d.Cantidad * COALESCE(d.PrecioUnitario, p.PrecioVenta)), 0) AS TotalCat,
+                                   IFNULL(u.Nombre, '') AS UsuarioNombre
+                            FROM Ventas v
+                            INNER JOIN DetalleVentas d ON d.VentaId = v.Id
+                            INNER JOIN Productos p ON p.Id = d.ProductoId
+                            LEFT JOIN Usuarios u ON u.Id = v.UsuarioId
+                            WHERE v.Estado = 'Activa'
+                              AND v.Fecha BETWEEN @D AND @H
+                              AND p.CategoriaId = @Cat
+                              {USR_FILTER}
+                            GROUP BY v.Id, v.UsuarioId, v.Fecha, u.Nombre
+                            ORDER BY v.Fecha;";
+                        sqlVentasPorCat = sqlVentasPorCat.Replace("{USR_FILTER}", usuarioId is > 0 ? "AND v.UsuarioId=@Usr" : "");
 
-                    productos = productos.Where(p => p.CategoriaId == categoriaId.Value).ToList();
-                }
+                        using var cmd = new SQLiteCommand(sqlVentasPorCat, cn);
+                        cmd.Parameters.AddWithValue("@D", desde);
+                        cmd.Parameters.AddWithValue("@H", hasta);
+                        cmd.Parameters.AddWithValue("@Cat", categoriaId.Value);
+                        if (usuarioId is > 0) cmd.Parameters.AddWithValue("@Usr", usuarioId.Value);
 
-                if (usuarioId is > 0)
-                {
-                    ventasTodas = ventasTodas.Where(v => v.UsuarioId == usuarioId.Value).ToList();
-                    comprasTodas = comprasTodas.Where(c => c.UsuarioId == usuarioId.Value).ToList();
-                }
+                        using var rd = cmd.ExecuteReader();
+                        while (rd.Read())
+                        {
+                            var v = new Venta
+                            {
+                                Id = rd.GetInt32(0),
+                                UsuarioId = rd.GetInt32(1),
+                                Fecha = rd.GetDateTime(2),
+                                Total = Convert.ToDecimal(rd.GetValue(3)),
+                                UsuarioNombre = rd.IsDBNull(4) ? "" : rd.GetString(4),
+                                Estado = "Activa"
+                            };
+                            ventasRango.Add(v);
+                        }
 
-                var ventasRango = ventasTodas.Where(v => v.Fecha >= desde && v.Fecha <= hasta)
-                    .OrderBy(v => v.Fecha).ToList();
-                var comprasRango = comprasTodas.Where(c => c.Fecha >= desde && c.Fecha <= hasta).ToList();
+                        // totalVentasRango: suma de los importes de detalles de la categoría
+                        var sqlTotalVentasCat = @"
+                            SELECT IFNULL(SUM(d.Cantidad * COALESCE(d.PrecioUnitario, p.PrecioVenta)), 0)
+                            FROM DetalleVentas d
+                            INNER JOIN Ventas v ON v.Id = d.VentaId
+                            INNER JOIN Productos p ON p.Id = d.ProductoId
+                            WHERE v.Estado='Activa' AND v.Fecha BETWEEN @D AND @H
+                              AND p.CategoriaId = @Cat
+                              {USR_FILTER};";
+                        sqlTotalVentasCat = sqlTotalVentasCat.Replace("{USR_FILTER}", usuarioId is > 0 ? "AND v.UsuarioId=@Usr" : "");
+                        using var cmdTot = new SQLiteCommand(sqlTotalVentasCat, cn);
+                        cmdTot.Parameters.AddWithValue("@D", desde);
+                        cmdTot.Parameters.AddWithValue("@H", hasta);
+                        cmdTot.Parameters.AddWithValue("@Cat", categoriaId.Value);
+                        if (usuarioId is > 0) cmdTot.Parameters.AddWithValue("@Usr", usuarioId.Value);
+                        var valTot = cmdTot.ExecuteScalar();
+                        totalVentasRango = valTot == null || valTot == DBNull.Value ? 0m : Convert.ToDecimal(valTot);
+                    }
+                    else
+                    {
+                        // Sin filtro de categoría: traer ventas completas (con UsuarioNombre)
+                        var sqlVentas = @"
+                            SELECT v.Id, v.UsuarioId, v.Fecha, v.Total, IFNULL(u.Nombre,'') AS UsuarioNombre, v.Estado
+                            FROM Ventas v
+                            LEFT JOIN Usuarios u ON u.Id = v.UsuarioId
+                            WHERE v.Estado='Activa' AND v.Fecha BETWEEN @D AND @H
+                            {USR_FILTER}
+                            ORDER BY v.Fecha;";
+                        sqlVentas = sqlVentas.Replace("{USR_FILTER}", usuarioId is > 0 ? "AND v.UsuarioId=@Usr" : "");
 
-                decimal totalVentasRango = ventasRango.Sum(v => v.Total);
-                decimal totalComprasRango = comprasRango.Sum(c => c.Total);
-                decimal ganancia = totalVentasRango - totalComprasRango;
+                        using (var cmd = new SQLiteCommand(sqlVentas, cn))
+                        {
+                            cmd.Parameters.AddWithValue("@D", desde);
+                            cmd.Parameters.AddWithValue("@H", hasta);
+                            if (usuarioId is > 0) cmd.Parameters.AddWithValue("@Usr", usuarioId.Value);
 
+                            using var rd = cmd.ExecuteReader();
+                            while (rd.Read())
+                            {
+                                var v = new Venta
+                                {
+                                    Id = rd.GetInt32(0),
+                                    UsuarioId = rd.IsDBNull(1) ? 0 : rd.GetInt32(1),
+                                    Fecha = rd.GetDateTime(2),
+                                    Total = Convert.ToDecimal(rd.GetValue(3)),
+                                    UsuarioNombre = rd.IsDBNull(4) ? "" : rd.GetString(4),
+                                    Estado = rd.IsDBNull(5) ? "" : rd.GetString(5)
+                                };
+                                ventasRango.Add(v);
+                            }
+                        }
+
+                        // totalVentasRango: suma normal de v.Total
+                        var sqlTotalVentas = @"
+                            SELECT IFNULL(SUM(v.Total), 0)
+                            FROM Ventas v
+                            WHERE v.Estado='Activa' AND v.Fecha BETWEEN @D AND @H
+                            {USR_FILTER};";
+                        sqlTotalVentas = sqlTotalVentas.Replace("{USR_FILTER}", usuarioId is > 0 ? "AND v.UsuarioId=@Usr" : "");
+                        using var cmd2 = new SQLiteCommand(sqlTotalVentas, cn);
+                        cmd2.Parameters.AddWithValue("@D", desde);
+                        cmd2.Parameters.AddWithValue("@H", hasta);
+                        if (usuarioId is > 0) cmd2.Parameters.AddWithValue("@Usr", usuarioId.Value);
+                        var val = cmd2.ExecuteScalar();
+                        totalVentasRango = val == null || val == DBNull.Value ? 0m : Convert.ToDecimal(val);
+                    }
+
+                    // totalComprasRango (se mantiene por compra completa, con filtro por categoría si existe)
+                    var sqlTotalCompras = @"
+                        SELECT IFNULL(SUM(c.Total), 0)
+                        FROM Compras c
+                        WHERE c.Estado='Activa' AND c.Fecha BETWEEN @D AND @H
+                        {USR_FILTER}
+                        {CAT_FILTER};";
+                    sqlTotalCompras = sqlTotalCompras.Replace("{USR_FILTER}", usuarioId is > 0 ? "AND c.UsuarioId=@Usr" : "");
+                    sqlTotalCompras = sqlTotalCompras.Replace("{CAT_FILTER}", categoriaId is > 0
+                        ? @"AND EXISTS(
+                                SELECT 1 FROM DetalleCompras dc
+                                INNER JOIN Productos p2 ON p2.Id=dc.ProductoId
+                                WHERE dc.CompraId=c.Id AND p2.CategoriaId=@Cat)"
+                        : "");
+                    using (var cmd3 = new SQLiteCommand(sqlTotalCompras, cn))
+                    {
+                        cmd3.Parameters.AddWithValue("@D", desde);
+                        cmd3.Parameters.AddWithValue("@H", hasta);
+                        if (usuarioId is > 0) cmd3.Parameters.AddWithValue("@Usr", usuarioId.Value);
+                        if (categoriaId is > 0) cmd3.Parameters.AddWithValue("@Cat", categoriaId.Value);
+                        var valCompr = cmd3.ExecuteScalar();
+                        totalComprasRango = valCompr == null || valCompr == DBNull.Value ? 0m : Convert.ToDecimal(valCompr);
+                    }
+
+                    // COGS: costo de los ítems realmente vendidos (si hay filtro de categoría se aplica)
+                    var sqlCogs = @"
+                        SELECT IFNULL(SUM(d.Cantidad * p.PrecioCompra), 0)
+                        FROM DetalleVentas d
+                        INNER JOIN Ventas v ON v.Id = d.VentaId
+                        INNER JOIN Productos p ON p.Id = d.ProductoId
+                        WHERE v.Estado='Activa' AND v.Fecha BETWEEN @D AND @H
+                        {USR_FILTER}
+                        {CAT_FILTER};";
+                    sqlCogs = sqlCogs.Replace("{USR_FILTER}", usuarioId is > 0 ? "AND v.UsuarioId=@Usr" : "");
+                    sqlCogs = sqlCogs.Replace("{CAT_FILTER}", categoriaId is > 0 ? "AND p.CategoriaId=@Cat" : "");
+                    using var cmdCogs = new SQLiteCommand(sqlCogs, cn);
+                    cmdCogs.Parameters.AddWithValue("@D", desde);
+                    cmdCogs.Parameters.AddWithValue("@H", hasta);
+                    if (usuarioId is > 0) cmdCogs.Parameters.AddWithValue("@Usr", usuarioId.Value);
+                    if (categoriaId is > 0) cmdCogs.Parameters.AddWithValue("@Cat", categoriaId.Value);
+                    var valCogs = cmdCogs.ExecuteScalar();
+                    costoVentas = valCogs == null || valCogs == DBNull.Value ? 0m : Convert.ToDecimal(valCogs);
+                } // using cn
+
+                // Ganancia: ventas (solo ítems de la categoría cuando aplica) - COGS
+                decimal ganancia = totalVentasRango - costoVentas;
+
+                // UI: asignaciones
                 txtVentasRango.Text = CurrencyService.FormatSoles(totalVentasRango, "N2");
                 txtGananciaNeta.Text = CurrencyService.FormatSoles(ganancia, "N2");
                 txtGananciaInfo.Text = "Compras: " + CurrencyService.FormatSoles(totalComprasRango, "N2");
@@ -248,29 +391,27 @@ namespace System_Market.Views
                 pbOrdenes.Value = ventasRango.Count;
                 pbOrdenes.ToolTip = string.Format(CultureInfo.CurrentCulture, "Órdenes: {0:N0} / {1:N0}", ventasRango.Count, objetivoOrdenes);
 
-                var stockBajo = productos.Where(p => p.Stock <= _umbralStock).OrderBy(p => p.Stock).ToList();
+                // Stock bajo: aplicar filtro por categoría a la lista de productos cargada arriba
+                var productosFiltrados = categoriaId is > 0 ? productos.Where(p => p.CategoriaId == categoriaId.Value).ToList() : productos;
+                var stockBajo = productosFiltrados.Where(p => p.Stock <= _umbralStock).OrderBy(p => p.Stock).ToList();
                 txtStockBajo.Text = stockBajo.Count.ToString();
                 dgStockBajo.ItemsSource = stockBajo;
-                txtPorcStockBajo.Text = productos.Count == 0
+                txtPorcStockBajo.Text = productosFiltrados.Count == 0
                     ? "0%"
-                    : (stockBajo.Count * 100m / productos.Count).ToString("N1") + "%";
+                    : (stockBajo.Count * 100m / productosFiltrados.Count).ToString("N1") + "%";
                 AplicarColorStock();
 
-                var hoy = DateTime.Today;
-                decimal ventasHoy = ventasTodas.Where(v => v.Fecha.Date == hoy).Sum(v => v.Total);
-                txtCantidadVentas.ToolTip = "Ventas hoy: " + CurrencyService.FormatSoles(ventasHoy, "N2");
-
-                CalcularMetaYProyeccion(ventasTodas);
-
+                // Visualizaciones consistentes: pasar ventasRango y recalcular agregados ya basados en detalles cuando corresponde
+                CalcularMetaYProyeccion(ventasRango);
                 var top = ObtenerTopVendidos(desde, hasta, 10, categoriaId, usuarioId);
                 MaxCantidadTop = top.Any() ? top.Max(t => t.Cantidad) : 1;
                 lvTopVendidos.ItemsSource = top;
 
                 ConstruirOrdenesRecientes(ventasRango);
                 ConstruirEvolucionVentas(ventasRango, desde, hasta);
-                ConstruirDistribucionCategorias(desde, hasta, categoriaId);
+                ConstruirDistribucionCategorias(desde, hasta, categoriaId, usuarioId);
                 ConstruirIngresosGastos(totalVentasRango, totalComprasRango);
-                CalcularDeltaVentas(ventasTodas, desde, hasta, totalVentasRango);
+                CalcularDeltaVentas(ventasRango, desde, hasta, totalVentasRango);
                 ConstruirHeatmapHoras(ventasRango);
 
                 if (stockBajo.Count > 0)
@@ -372,7 +513,7 @@ namespace System_Market.Views
             return escala * potencia;
         }
 
-        private void ConstruirDistribucionCategorias(DateTime desde, DateTime hasta, int? categoriaFiltro)
+        private void ConstruirDistribucionCategorias(DateTime desde, DateTime hasta, int? categoriaFiltro, int? usuarioFiltro)
         {
             var cantidades = new List<(string Nombre, int Cant)>();
             using var cn = new SQLiteConnection(_conn);
@@ -387,13 +528,12 @@ namespace System_Market.Views
                 WHERE v.Estado='Activa' 
                   AND v.Fecha BETWEEN @D AND @H
                   {CAT_FILTRO}
+                  {USR_FILTRO}
                 GROUP BY c.Nombre
                 ORDER BY Cant DESC;";
 
-            if (categoriaFiltro is > 0)
-                sql = sql.Replace("{CAT_FILTRO}", "AND p.CategoriaId=@Cat");
-            else
-                sql = sql.Replace("{CAT_FILTRO}", "");
+            sql = sql.Replace("{CAT_FILTRO}", categoriaFiltro is > 0 ? "AND p.CategoriaId=@Cat" : "");
+            sql = sql.Replace("{USR_FILTRO}", usuarioFiltro is > 0 ? "AND v.UsuarioId=@Usr" : "");
 
             using (var cmd = new SQLiteCommand(sql, cn))
             {
@@ -401,6 +541,8 @@ namespace System_Market.Views
                 cmd.Parameters.AddWithValue("@H", hasta);
                 if (categoriaFiltro is > 0)
                     cmd.Parameters.AddWithValue("@Cat", categoriaFiltro.Value);
+                if (usuarioFiltro is > 0)
+                    cmd.Parameters.AddWithValue("@Usr", usuarioFiltro.Value);
 
                 using var rd = cmd.ExecuteReader();
                 while (rd.Read())
@@ -498,7 +640,8 @@ namespace System_Market.Views
                     new Axis
                     {
                         MinLimit = 0,
-                        Labeler = v => "S/ " + v.ToString("N0"),
+                        // Mostrar decimales (no redondear). Usar CurrencyService para consistencia local.
+                        Labeler = v => CurrencyService.FormatSoles((decimal)v, "N2"),
                         LabelsPaint = new SolidColorPaint(new SKColor(130,140,148)),
                         SeparatorsPaint = new SolidColorPaint(new SKColor(40,60,66)){ StrokeThickness = 0.6f },
                         TextSize = 11
@@ -736,8 +879,22 @@ private void ConstruirHeatmapHoras(List<Venta> ventasRango)
         #region Utilidades
         private (DateTime desde, DateTime hasta) ObtenerRangoFechas()
         {
-            if (cbRangoFecha.SelectedItem is RangoFechaPreset preset && preset.Clave != "PERS")
-                return preset.Rango();
+            // Preferir SelectedItem (binding correcto)
+            if (cbRangoFecha.SelectedItem is RangoFechaPreset preset)
+            {
+                if (preset.Clave != "PERS")
+                    return preset.Rango();
+            }
+
+            // Fallback: si SelectedItem no está inicializado, intentar SelectedValue (clave)
+            if (cbRangoFecha.SelectedValue is string clave)
+            {
+                var p = RangoFechaPresets.FirstOrDefault(r => string.Equals(r.Clave, clave, StringComparison.OrdinalIgnoreCase));
+                if (p != null && p.Clave != "PERS")
+                    return p.Rango();
+            }
+
+            // Por defecto usar los pickers
             var dSel = (dpDesde.SelectedDate ?? DateTime.Today).Date;
             var hSel = (dpHasta.SelectedDate ?? DateTime.Today).Date.AddDays(1).AddTicks(-1);
             if (hSel < dSel) hSel = dSel.AddDays(1).AddTicks(-1);

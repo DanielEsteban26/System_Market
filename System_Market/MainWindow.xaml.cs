@@ -203,7 +203,23 @@ namespace System_Market
         private async void BtnProveedores_Click(object sender, RoutedEventArgs e) { new ProveedorWindow().ShowDialog(); await RefreshAsync(); }
         private async void BtnUsuarios_Click(object sender, RoutedEventArgs e) { new UsuarioWindow().ShowDialog(); await RefreshAsync(); }
         private async void BtnCategorias_Click(object sender, RoutedEventArgs e) { new CategoriaWindow().ShowDialog(); await RefreshAsync(); }
-        private void BtnReportes_Click(object sender, RoutedEventArgs e) { /* implementar */ }
+        private async void BtnReportes_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var w = new ReportesWindow
+                {
+                    Owner = this,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                };
+                w.ShowDialog();
+                await RefreshAsync();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error abriendo Reportes: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
 
         private void BtnAgregarAccion_Click(object sender, RoutedEventArgs e)
         {
@@ -292,8 +308,12 @@ namespace System_Market
         // Acerca de
         private void BtnAbout_Click(object sender, RoutedEventArgs e)
         {
-            var about = new AboutWindow { Owner = this, WindowStartupLocation = WindowStartupLocation.CenterOwner };
-            about.ShowDialog();
+            var acerca = new AcercaWindow
+            {
+                Owner = this,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
+            };
+            acerca.ShowDialog();
         }
 
         // Cerrar sesión: oculta main, muestra login modal y actúa según resultado

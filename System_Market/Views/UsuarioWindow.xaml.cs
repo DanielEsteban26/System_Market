@@ -46,9 +46,13 @@ namespace System_Market.Views
                 string.IsNullOrWhiteSpace(txtClave.Password) ||
                 cbRol.SelectedItem == null)
             {
-                MessageBox.Show("Complete todos los campos.");
+                MessageBox.Show("Complete todos los campos.", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
+
+            var confirmar = MessageBox.Show("¿Desea agregar este usuario?", "Confirmar agregado", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (confirmar != MessageBoxResult.Yes)
+                return;
 
             var usuario = new Usuario
             {
@@ -63,10 +67,11 @@ namespace System_Market.Views
                 _usuarioService.AgregarUsuario(usuario);
                 CargarUsuarios();
                 LimpiarCampos();
+                MessageBox.Show("Usuario agregado correctamente.", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (System.Exception ex)
             {
-                MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(ex.Message, "Error al agregar", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
@@ -74,9 +79,13 @@ namespace System_Market.Views
         {
             if (_usuarioSeleccionado == null)
             {
-                MessageBox.Show("Seleccione un usuario para actualizar.");
+                MessageBox.Show("Seleccione un usuario para actualizar.", "Aviso", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
+
+            var confirmar = MessageBox.Show("¿Desea actualizar este usuario?", "Confirmar actualización", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (confirmar != MessageBoxResult.Yes)
+                return;
 
             _usuarioSeleccionado.Nombre = txtNombre.Text;
             _usuarioSeleccionado.UsuarioNombre = txtUsuario.Text;
@@ -88,10 +97,11 @@ namespace System_Market.Views
                 _usuarioService.ActualizarUsuario(_usuarioSeleccionado);
                 CargarUsuarios();
                 LimpiarCampos();
+                MessageBox.Show("Usuario actualizado correctamente.", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (System.Exception ex)
             {
-                MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(ex.Message, "Error al actualizar", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
@@ -99,13 +109,25 @@ namespace System_Market.Views
         {
             if (_usuarioSeleccionado == null)
             {
-                MessageBox.Show("Seleccione un usuario para eliminar.");
+                MessageBox.Show("Seleccione un usuario para eliminar.", "Aviso", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            _usuarioService.EliminarUsuario(_usuarioSeleccionado.Id);
-            CargarUsuarios();
-            LimpiarCampos();
+            var confirmar = MessageBox.Show($"¿Eliminar usuario '{_usuarioSeleccionado.Nombre}'? Esta acción no se puede deshacer.", "Confirmar eliminación", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (confirmar != MessageBoxResult.Yes)
+                return;
+
+            try
+            {
+                _usuarioService.EliminarUsuario(_usuarioSeleccionado.Id);
+                CargarUsuarios();
+                LimpiarCampos();
+                MessageBox.Show("Usuario eliminado correctamente.", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (System.Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Error al eliminar", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
         }
 
         private void btnLimpiar_Click(object sender, RoutedEventArgs e)

@@ -1,0 +1,72 @@
+using System;
+using System.Diagnostics;
+using System.Reflection;
+using System.Windows;
+using System.Windows.Input;
+using System.Windows.Navigation;
+
+namespace System_Market.Views
+{
+    public partial class AcercaWindow : Window
+    {
+        public AcercaWindow()
+        {
+            InitializeComponent();
+            txtVersion.Text = "Versión " + ObtenerVersion();
+        }
+
+        private string ObtenerVersion()
+        {
+            try
+            {
+                var asm = Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly();
+                var ver = asm.GetName().Version;
+                if (ver != null) return ver.ToString();
+                var fvi = FileVersionInfo.GetVersionInfo(asm.Location);
+                return fvi.FileVersion ?? "1.0.0.0";
+            }
+            catch
+            {
+                return "1.0.0.0";
+            }
+        }
+
+        private void OpenUrl(string url)
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("No se pudo abrir el enlace: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        private void BtnGithub_Click(object sender, RoutedEventArgs e)
+        {
+            OpenUrl("https://github.com/DanielEsteban26/System_Market");
+        }
+
+        private void BtnLinkedIn_Click(object sender, RoutedEventArgs e)
+        {
+            OpenUrl("https://www.linkedin.com/"); // reemplaza por tu perfil si lo deseas
+        }
+
+        private void Mail_RequestNavigate(object sender, RequestNavigateEventArgs e)
+        {
+            OpenUrl(e.Uri.AbsoluteUri);
+            e.Handled = true;
+        }
+
+        private void BtnCerrar_Click(object sender, RoutedEventArgs e)
+        {
+            Close();
+        }
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            try { btnCerrar?.Focus(); } catch { }
+        }
+    }
+}

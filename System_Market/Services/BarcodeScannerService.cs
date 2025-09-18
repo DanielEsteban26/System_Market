@@ -7,6 +7,8 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
 using System_Market.Views;
+using System.Windows.Controls; // añadido
+using System.Windows.Controls.Primitives; // añadido
 
 namespace System_Market.Services
 {
@@ -128,6 +130,22 @@ namespace System_Market.Services
             // Antes se descartaba si no era "fast"; ahora aceptamos si es plausible
             if (!fast && !EsCodigoPlausible(code))
                 return;
+
+            // --- NUEVO: si el foco actual está en un control editable (TextBox / PasswordBox / TextBoxBase)
+            // asumimos que el usuario está escribiendo manualmente y no tratamos esto como escaneo.
+            try
+            {
+                var focused = Keyboard.FocusedElement;
+                if (focused is TextBoxBase || focused is TextBox || focused is PasswordBox)
+                {
+                    if (EnableDebug) Debug.WriteLine("[Scanner] Ignorado porque el foco está en un control editable.");
+                    return;
+                }
+            }
+            catch
+            {
+                // Si algo falla al inspeccionar el foco, continuamos normalmente.
+            }
 
             _lastCode = code;
             _lastCodeTime = DateTime.UtcNow;

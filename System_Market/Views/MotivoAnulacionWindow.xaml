@@ -7,22 +7,64 @@
         MinHeight="260" MinWidth="500"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
-        Background="{DynamicResource MaterialDesignPaper}"
+        Background="{DynamicResource MainBgLocal}"
         FontFamily="Segoe UI"
         UseLayoutRounding="True"
         SnapsToDevicePixels="True">
 
     <Window.Resources>
-        <SolidColorBrush x:Key="BrushBtnPrimary" Color="#3F51B5"/>
-        <SolidColorBrush x:Key="BrushBtnNeutral" Color="#607D8B"/>
-        <!-- Redondeo para los Cards (reemplaza CornerRadius en Card) -->
-        <CornerRadius x:Key="MaterialDesignCardCornerRadius">8</CornerRadius>
+        <!-- Fondo principal (asegura que exista MainBgLocal si no está centralizado) -->
+        <LinearGradientBrush x:Key="MainBgLocal" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#07202A" Offset="0"/>
+            <GradientStop Color="#0F3F68" Offset="1"/>
+        </LinearGradientBrush>
+
+        <!-- Paleta local (coherente con CompraWindow) -->
+        <SolidColorBrush x:Key="CardBgLight" Color="#17202A"/>
+        <SolidColorBrush x:Key="CardBg" Color="#11151A"/>
+        <SolidColorBrush x:Key="AccentTeal" Color="#19C1D3"/>
+        <SolidColorBrush x:Key="AccentTealDark" Color="#0F94A0"/>
+        <SolidColorBrush x:Key="HeaderText" Color="#E8F6F9"/>
+        <SolidColorBrush x:Key="MutedText" Color="#BFD7DB"/>
+
+        <!-- Botones sencillos basados en MaterialDesign -->
+        <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
+            <Setter Property="Background" Value="{StaticResource AccentTeal}"/>
+            <Setter Property="Foreground" Value="{StaticResource HeaderText}"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="Margin" Value="0,0,0,0"/>
+            <Setter Property="MinWidth" Value="110"/>
+            <Setter Property="BorderBrush" Value="{StaticResource AccentTealDark}"/>
+            <Setter Property="materialDesign:ShadowAssist.ShadowDepth" Value="Depth2"/>
+        </Style>
+
+        <Style x:Key="NeutralButton" TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
+            <Setter Property="Background" Value="#394B52"/>
+            <Setter Property="Foreground" Value="{StaticResource HeaderText}"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="MinWidth" Value="110"/>
+            <Setter Property="materialDesign:ShadowAssist.ShadowDepth" Value="Depth1"/>
+        </Style>
+
+        <!-- Estilos de modal -->
+        <Style x:Key="ModalTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{StaticResource HeaderText}"/>
+        </Style>
+        <Style x:Key="ModalDescription" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{StaticResource MutedText}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
     </Window.Resources>
 
     <Grid Margin="16">
-        <materialDesign:Card Padding="16"
-                             Background="{DynamicResource MaterialDesignCardBackground}"
-                             materialDesign:ShadowAssist.ShadowDepth="Depth3">
+        <Border Background="{StaticResource CardBgLight}"
+                CornerRadius="10"
+                Padding="18"
+                materialDesign:ShadowAssist.ShadowDepth="Depth3">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>  <!-- Header -->
@@ -32,27 +74,24 @@
                 </Grid.RowDefinitions>
 
                 <!-- Header -->
-                <DockPanel Grid.Row="0" LastChildFill="False" Margin="0,0,0,8">
-                    <TextBlock FontFamily="Segoe MDL2 Assets"
-                               Text="&#xE783;"
-                               FontSize="18"
-                               Foreground="{DynamicResource PrimaryHueMidBrush}"
-                               Margin="0,0,6,0"/>
-                    <TextBlock Text="Ingrese el motivo de anulación"
-                               FontSize="16" FontWeight="SemiBold"
-                               Foreground="{DynamicResource MaterialDesignBody}"/>
-                </DockPanel>
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8" VerticalAlignment="Center">
+                    <Border Width="36" Height="36" CornerRadius="18" Background="{StaticResource CardBg}" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="0,0,8,0">
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE783;" Foreground="{StaticResource AccentTeal}" FontSize="18" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                    </Border>
+                    <StackPanel>
+                        <TextBlock Text="Ingrese el motivo de anulación" Style="{StaticResource ModalTitle}"/>
+                        <TextBlock Text="La razón quedará registrada y será visible en el historial." Style="{StaticResource ModalDescription}" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </StackPanel>
 
-                <!-- Info -->
+                <!-- Info (opcional redundante) -->
                 <TextBlock Grid.Row="1"
-                           Text="Este motivo quedará registrado junto a la anulación y será visible en el historial."
-                           Foreground="{DynamicResource MaterialDesignBody}"
-                           Opacity="0.75"
-                           TextWrapping="Wrap"
-                           Margin="0,0,0,8"/>
+                           Text=""
+                           Visibility="Collapsed"
+                           Margin="0,0,0,6"/>
 
                 <!-- Motivo -->
-                <Grid Grid.Row="2">
+                <Grid Grid.Row="2" Margin="0,6,0,0">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
@@ -67,17 +106,18 @@
                              AcceptsReturn="True"
                              VerticalScrollBarVisibility="Auto"
                              MaxLength="300"
-                             MinHeight="180"
+                             MinHeight="140"
+                             Background="{StaticResource CardBg}"
+                             Foreground="{StaticResource HeaderText}"
+                             BorderBrush="#23333A"
                              materialDesign:TextFieldAssist.DecorationVisibility="Hidden"/>
 
-                    <!-- Contador -->
-                    <DockPanel Grid.Row="1" Margin="0,6,0,0">
-                        <TextBlock Text="{Binding Text.Length, ElementName=txtMotivo}"
-                                   Foreground="{DynamicResource MaterialDesignBody}"
-                                   Opacity="0.7"/>
-                        <TextBlock Text="/300" Margin="2,0,0,0"
-                                   Foreground="{DynamicResource MaterialDesignBody}"
-                                   Opacity="0.7"/>
+                    <!-- Contador alineado a la derecha -->
+                    <DockPanel Grid.Row="1" Margin="0,8,0,0">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <TextBlock Text="{Binding Text.Length, ElementName=txtMotivo}" Foreground="{StaticResource MutedText}" Opacity="0.85"/>
+                            <TextBlock Text="/300" Foreground="{StaticResource MutedText}" Opacity="0.85" Margin="4,0,0,0"/>
+                        </StackPanel>
                     </DockPanel>
                 </Grid>
 
@@ -85,41 +125,24 @@
                 <DockPanel Grid.Row="3" Margin="0,12,0,0">
                     <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
                         <Button Content="Cancelar"
-                                Padding="14,6"
+                                Padding="12,8"
                                 Margin="0,0,8,0"
-                                Background="{StaticResource BrushBtnNeutral}"
-                                Foreground="White"
-                                IsCancel="True">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}"/>
-                            </Button.Style>
-                        </Button>
+                                IsCancel="True"
+                                Style="{StaticResource NeutralButton}"/>
 
                         <Button x:Name="btnConfirmar"
-                                Padding="14,6"
-                                Background="{StaticResource BrushBtnPrimary}"
-                                Foreground="White"
+                                Padding="12,8"
                                 IsDefault="True"
-                                Click="BtnConfirmar_Click">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
-                                    <Setter Property="IsEnabled" Value="True"/>
-                                    <Style.Triggers>
-                                        <!-- Deshabilita si no hay texto -->
-                                        <DataTrigger Binding="{Binding Text.Length, ElementName=txtMotivo}" Value="0">
-                                            <Setter Property="IsEnabled" Value="False"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8FB;" Margin="0,0,6,0"/>
-                                <TextBlock Text="Confirmar"/>
+                                Click="BtnConfirmar_Click"
+                                Style="{StaticResource PrimaryButton}">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8FB;" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Confirmar" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                     </StackPanel>
                 </DockPanel>
             </Grid>
-        </materialDesign:Card>
+        </Border>
     </Grid>
 </Window>

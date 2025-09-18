@@ -4,18 +4,159 @@
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:sys="clr-namespace:System;assembly=System.Runtime"
         Title="Gestión de Categorías"
-        Height="440" Width="680"
+        Height="480" Width="780"
         MinHeight="380" MinWidth="560"
         WindowStartupLocation="CenterOwner"
-        Background="{DynamicResource MaterialDesignPaper}"
+        Background="{DynamicResource MainBgLocal}"
         FontFamily="Segoe UI"
         UseLayoutRounding="True"
         SnapsToDevicePixels="True">
 
     <Window.Resources>
-        <sys:Double x:Key="CtlHeight">36</sys:Double>
+        <!-- Fondo local -->
+        <LinearGradientBrush x:Key="MainBgLocal" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#0B2E3A" Offset="0"/>
+            <GradientStop Color="#117A8A" Offset="1"/>
+        </LinearGradientBrush>
+
+        <!-- Paleta y métricas -->
+        <SolidColorBrush x:Key="CardBg" Color="#0D1B22"/>
+        <SolidColorBrush x:Key="CardBgLight" Color="#12242C"/>
+        <SolidColorBrush x:Key="AccentTeal" Color="#19C1D3"/>
+        <SolidColorBrush x:Key="AccentBlue" Color="#0288D1"/>
+        <SolidColorBrush x:Key="DangerColor" Color="#D9534F"/>
+        <SolidColorBrush x:Key="HeaderText" Color="#E8F6F9"/>
+        <SolidColorBrush x:Key="MutedText" Color="#8EA6AB"/>
+        <SolidColorBrush x:Key="RowDivider" Color="#23333A"/>
+        <sys:Double x:Key="CtlHeight">40</sys:Double>
         <Thickness x:Key="CtlPadding">14,6</Thickness>
         <sys:Double x:Key="CtlFontSize">13</sys:Double>
+
+        <!-- Pill buttons -->
+        <Style x:Key="PillButtonBase" TargetType="Button">
+            <Setter Property="Foreground" Value="{StaticResource HeaderText}"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="MinHeight" Value="36"/>
+            <Setter Property="MinWidth" Value="110"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="18" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="RenderTransform">
+                                    <Setter.Value><ScaleTransform ScaleX="1.03" ScaleY="1.03"/></Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="RenderTransform">
+                                    <Setter.Value><ScaleTransform ScaleX="0.98" ScaleY="0.98"/></Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.6"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource PillButtonBase}">
+            <Setter Property="Background" Value="{StaticResource AccentTeal}"/>
+        </Style>
+        <Style x:Key="AccentButton" TargetType="Button" BasedOn="{StaticResource PillButtonBase}">
+            <Setter Property="Background" Value="{StaticResource AccentBlue}"/>
+        </Style>
+        <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource PillButtonBase}">
+            <Setter Property="Background" Value="{StaticResource DangerColor}"/>
+        </Style>
+
+        <!-- Inputs -->
+        <Style x:Key="DarkTextBox" TargetType="TextBox">
+            <Setter Property="Height" Value="{StaticResource CtlHeight}"/>
+            <Setter Property="Background" Value="{StaticResource CardBg}"/>
+            <Setter Property="Foreground" Value="{StaticResource HeaderText}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource RowDivider}"/>
+            <Setter Property="Padding" Value="12,0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ScrollViewer x:Name="PART_ContentHost" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentTeal}"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentTeal}"/>
+                                <Setter TargetName="Bd" Property="Effect">
+                                    <Setter.Value><DropShadowEffect Color="#22000000" BlurRadius="6" ShadowDepth="2"/></Setter.Value>
+                                </Setter>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- DataGrid local styles originales (se conservan por si se usan en otras partes) -->
+        <Style x:Key="GridHeaderStyle" TargetType="DataGridColumnHeader">
+            <Setter Property="Foreground" Value="{StaticResource AccentTeal}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="BorderBrush" Value="{StaticResource RowDivider}"/>
+        </Style>
+
+        <Style x:Key="GridCellStyle" TargetType="DataGridCell">
+            <Setter Property="Foreground" Value="{StaticResource HeaderText}"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="BorderBrush" Value="{StaticResource RowDivider}"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#081617"/>
+                </Trigger>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#0A2A2F"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="GridRowStyle" TargetType="DataGridRow">
+            <Setter Property="MinHeight" Value="36"/>
+        </Style>
+
+        <!-- Estilos copiados de ProductoWindow para lograr el mismo aspecto y selección -->
+        <Style x:Key="NiceDataGrid" TargetType="DataGrid">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="RowBackground" Value="#0F000000"/>
+            <Setter Property="AlternatingRowBackground" Value="#14000000"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="#1FFFFFFF"/>
+            <Setter Property="VerticalGridLinesBrush" Value="#0FFFFFFF"/>
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+
+        <Style x:Key="NiceGridHeaderStyle" TargetType="DataGridColumnHeader">
+            <Setter Property="Foreground" Value="{StaticResource AccentTeal}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
     </Window.Resources>
 
     <Grid Margin="16">
@@ -26,21 +167,19 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Encabezado -->
+        <!-- Header -->
         <DockPanel Grid.Row="0" Margin="0,0,0,12">
             <StackPanel Orientation="Horizontal">
-                <TextBlock Text="Categorías" FontSize="20" FontWeight="Bold"
-                           Foreground="{DynamicResource PrimaryHueMidBrush}"/>
-                <TextBlock Text="  •  Administra las categorías" Margin="6,4,0,0"
-                           Foreground="{DynamicResource MaterialDesignBody}"/>
+                <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8D1;" FontSize="20" Foreground="{StaticResource AccentTeal}" Margin="0,0,8,0"/>
+                <StackPanel>
+                    <TextBlock Text="Categorías" FontSize="20" FontWeight="Bold" Foreground="{StaticResource HeaderText}"/>
+                    <TextBlock Text="Administra las categorías" Foreground="{StaticResource MutedText}" FontSize="12"/>
+                </StackPanel>
             </StackPanel>
         </DockPanel>
 
-        <!-- Panel de ingreso (Card) -->
-        <materialDesign:Card Grid.Row="1"
-                             Padding="15" Margin="0,0,0,10"
-                             materialDesign:ShadowAssist.ShadowDepth="Depth2"
-                             Background="{DynamicResource MaterialDesignCardBackground}">
+        <!-- Input card -->
+        <Border Grid.Row="1" Background="{StaticResource CardBgLight}" CornerRadius="10" Padding="14" Margin="0,0,0,12" materialDesign:ShadowAssist.ShadowDepth="Depth1">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -48,30 +187,18 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Campo nombre -->
-                <StackPanel Grid.Column="0" Margin="0,0,8,0">
-                    <TextBlock Text="Nombre de la categoría"
-                               FontSize="12"
-                               Foreground="{DynamicResource MaterialDesignBody}"
-                               Margin="2,0,0,4"/>
+                <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                    <TextBlock Text="Nombre de la categoría" Foreground="{StaticResource AccentTeal}" FontSize="12" Margin="2,0,0,6"/>
                     <TextBox x:Name="txtNombreCategoria"
-                             Height="{StaticResource CtlHeight}"
+                             Style="{StaticResource DarkTextBox}"
                              FontSize="{StaticResource CtlFontSize}"
-                             Padding="10,0"
                              VerticalContentAlignment="Center"
                              ToolTip="Escribe el nombre y pulsa Agregar o Actualizar"/>
                 </StackPanel>
 
-                <!-- Agregar -->
-                <Button Grid.Column="1"
-                        x:Name="btnAgregar"
-                        Margin="0,22,8,0"
-                        Padding="{StaticResource CtlPadding}"
-                        MinHeight="{StaticResource CtlHeight}"
-                        FontSize="{StaticResource CtlFontSize}"
-                        Click="BtnAgregar_Click">
+                <Button Grid.Column="1" x:Name="btnAgregar" Padding="{StaticResource CtlPadding}" MinHeight="{StaticResource CtlHeight}" Click="BtnAgregar_Click" Background="{StaticResource AccentTeal}" Foreground="{StaticResource HeaderText}" Margin="0,22,8,0">
                     <Button.Style>
-                        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
+                        <Style TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
                             <Setter Property="IsEnabled" Value="True"/>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding Text.Length, ElementName=txtNombreCategoria}" Value="0">
@@ -86,16 +213,9 @@
                     </StackPanel>
                 </Button>
 
-                <!-- Actualizar -->
-                <Button Grid.Column="2"
-                        x:Name="btnActualizar"
-                        Margin="0,22,0,0"
-                        Padding="{StaticResource CtlPadding}"
-                        MinHeight="{StaticResource CtlHeight}"
-                        FontSize="{StaticResource CtlFontSize}"
-                        Click="BtnActualizar_Click">
+                <Button Grid.Column="2" x:Name="btnActualizar" Padding="{StaticResource CtlPadding}" MinHeight="{StaticResource CtlHeight}" Click="BtnActualizar_Click" Background="{StaticResource AccentBlue}" Foreground="{StaticResource HeaderText}" Margin="0,22,0,0">
                     <Button.Style>
-                        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
+                        <Style TargetType="Button" BasedOn="{StaticResource AccentButton}">
                             <Setter Property="IsEnabled" Value="True"/>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding SelectedItem, ElementName=dgCategorias}" Value="{x:Null}">
@@ -113,42 +233,52 @@
                     </StackPanel>
                 </Button>
             </Grid>
-        </materialDesign:Card>
+        </Border>
 
         <!-- Lista -->
-        <DataGrid x:Name="dgCategorias"
-                  Grid.Row="2"
-                  AutoGenerateColumns="False"
-                  CanUserAddRows="False"
-                  SelectionMode="Single"
-                  SelectionChanged="dgCategorias_SelectionChanged"
-                  Margin="0,0,0,12"
-                  Background="Transparent"
-                  BorderThickness="0"
-                  HeadersVisibility="Column"
-                  AlternationCount="2"
-                  AlternatingRowBackground="#0FFFFFFF"
-                  materialDesign:DataGridAssist.CellPadding="10,6,10,6"
-                  materialDesign:DataGridAssist.ColumnHeaderPadding="10,8,10,8">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="90" IsReadOnly="True"/>
-                <DataGridTextColumn Header="Nombre" Binding="{Binding Nombre}" Width="*"/>
-            </DataGrid.Columns>
-        </DataGrid>
+        <Border Grid.Row="2" Background="{StaticResource CardBg}" CornerRadius="10" Padding="12" materialDesign:ShadowAssist.ShadowDepth="Depth2" Margin="0,0,0,12">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <TextBlock Text="Lista de categorías" Foreground="{StaticResource HeaderText}" FontSize="14" FontWeight="SemiBold" Margin="6,0,0,8"/>
 
-        <!-- Barra inferior -->
+                <DataGrid x:Name="dgCategorias"
+                          Grid.Row="1"
+                          AutoGenerateColumns="False"
+                          CanUserAddRows="False"
+                          CanUserDeleteRows="False"
+                          IsReadOnly="True"
+                          SelectionMode="Single"
+                          SelectionChanged="dgCategorias_SelectionChanged"
+                          Style="{StaticResource NiceDataGrid}"
+                          ColumnHeaderStyle="{StaticResource NiceGridHeaderStyle}"
+                          HeadersVisibility="Column"
+                          AlternationCount="2"
+                          CanUserResizeRows="False"
+                          Background="Transparent"
+                          BorderThickness="0"
+                          Foreground="{StaticResource HeaderText}"
+                          materialDesign:DataGridAssist.CellPadding="10,8,10,8"
+                          materialDesign:DataGridAssist.ColumnHeaderPadding="10,8,10,8"
+                          ScrollViewer.VerticalScrollBarVisibility="Auto"
+                          >
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="90" IsReadOnly="True"/>
+                        <DataGridTextColumn Header="Nombre" Binding="{Binding Nombre}" Width="*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </Border>
+
+        <!-- Footer -->
         <DockPanel Grid.Row="3">
-            <TextBlock Text="Consejo: selecciona una fila para editarla, o escribe y pulsa Agregar."
-                       FontSize="11" Foreground="{DynamicResource MaterialDesignBody}"/>
-            <StackPanel Orientation="Horizontal"
-                        DockPanel.Dock="Right"
-                        HorizontalAlignment="Right">
-                <Button x:Name="btnEliminar"
-                        Padding="12,8"
-                        Click="BtnEliminar_Click"
-                        Background="#EF5350">
+            <TextBlock Text="Consejo: selecciona una fila para editarla, o escribe y pulsa Agregar." Foreground="{StaticResource MutedText}" FontSize="11" VerticalAlignment="Center"/>
+            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                <Button x:Name="btnEliminar" Padding="12,8" Click="BtnEliminar_Click" Background="{StaticResource DangerColor}" Foreground="{StaticResource HeaderText}" Width="129">
                     <Button.Style>
-                        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
+                        <Style TargetType="{x:Type Button}" BasedOn="{StaticResource DangerButton}">
                             <Setter Property="IsEnabled" Value="True"/>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding SelectedItem, ElementName=dgCategorias}" Value="{x:Null}">

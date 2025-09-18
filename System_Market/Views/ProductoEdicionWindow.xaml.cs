@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -34,13 +35,23 @@ namespace System_Market.Views
         private Producto? _productoConEseCodigo;
         private bool _codigoExiste;
 
+        // Permitir solo dígitos y separador decimal coma para precios (no puntos)
+        private static readonly Regex RegexPrecioInput = new(@"^[0-9,]+$", RegexOptions.Compiled);
+
+        // Permitir solo dígitos enteros para stock
+        private static readonly Regex RegexEntero = new(@"^[0-9]+$", RegexOptions.Compiled);
+
+        // Protección: descartar pulsaciones muy rápidas (scanner) en los TextBox con foco
+        private DateTime _lastTextInputTime = DateTime.MinValue;
+        private const double FastInputThresholdMs = 30.0; // ajusta si es necesario
+
         public ProductoEdicionWindow(string connectionString, Producto producto = null, string codigoPrefill = null, bool bloquearCodigo = false)
         {
             InitializeComponent();
             _categoriaService = new CategoriaService(connectionString);
             _proveedorService = new ProveedorService(connectionString);
-            _productoService  = new ProductoService(connectionString);
-            _codigoBloqueado  = bloquearCodigo;
+            _productoService = new ProductoService(connectionString);
+            _codigoBloqueado = bloquearCodigo;
 
             cbCategoria.ItemsSource = _categoriaService.ObtenerTodas();
             cbProveedor.ItemsSource = _proveedorService.ObtenerTodos();
@@ -52,6 +63,27 @@ namespace System_Market.Views
             txtCodigoBarras.TextChanged += TxtCodigoBarras_TextChanged;
             txtCodigoBarras.PreviewKeyDown += TxtCodigoBarras_PreviewKeyDown;
 
+            // Registramos handlers para los campos de precio (solo coma; NO formateo automático)
+            txtPrecioCompra.PreviewTextInput += Precio_PreviewTextInput;
+            txtPrecioVenta.PreviewTextInput += Precio_PreviewTextInput;
+            DataObject.AddPastingHandler(txtPrecioCompra, Precio_PasteHandler);
+            DataObject.AddPastingHandler(txtPrecioVenta, Precio_PasteHandler);
+
+            // Registramos handlers para el campo de stock (solo enteros)
+            txtStock.PreviewTextInput += Stock_PreviewTextInput;
+            txtStock.PreviewKeyDown += Stock_PreviewKeyDown;
+            DataObject.AddPastingHandler(txtStock, Stock_PasteHandler);
+
+            // --- Protección contra "residuos" del escáner: registrar para los TextBox principales ---
+            // Nota: NO registramos PreviewKeyDown aquí para evitar conflicto entre KeyDown y TextInput.
+            var protectedTbs = new[] { txtCodigoBarras, txtNombre, txtPrecioCompra, txtPrecioVenta, txtStock };
+            foreach (var tb in protectedTbs)
+            {
+                if (tb == null) continue;
+                tb.PreviewTextInput += FastInput_PreviewTextInput;
+                DataObject.AddPastingHandler(tb, ProtectedTextBox_PasteHandler);
+            }
+
             if (producto != null)
             {
                 _esEdicion = true;
@@ -60,9 +92,10 @@ namespace System_Market.Views
                 txtNombre.Text = producto.Nombre;
                 cbCategoria.SelectedValue = producto.CategoriaId;
                 cbProveedor.SelectedValue = producto.ProveedorId;
-                txtPrecioCompra.Text = producto.PrecioCompra.ToString(CultureInfo.InvariantCulture);
-                txtPrecioVenta.Text = producto.PrecioVenta.ToString(CultureInfo.InvariantCulture);
-                txtStock.Text = producto.Stock.ToString();
+                // Mostrar valores numéricos SIN prefijo "S/"
+                txtPrecioCompra.Text = producto.PrecioCompra.ToString("F2", CultureInfo.CurrentCulture);
+                txtPrecioVenta.Text = producto.PrecioVenta.ToString("F2", CultureInfo.CurrentCulture);
+                txtStock.Text = producto.Stock.ToString(CultureInfo.CurrentCulture);
                 Title = "Editar Producto";
             }
             else
@@ -74,6 +107,11 @@ namespace System_Market.Views
                     if (_codigoBloqueado) BloquearCodigo();
                     VerificarCodigoExistente(txtCodigoBarras.Text);
                 }
+
+                // No forzar formato; dejar vacío para que el usuario escriba
+                txtPrecioCompra.Text = string.Empty;
+                txtPrecioVenta.Text = string.Empty;
+                txtStock.Text = string.Empty;
             }
 
             // Estado inicial del status textblock si existe
@@ -81,11 +119,127 @@ namespace System_Market.Views
                 txtEstadoCodigo.Text = "Ingrese / escanee un código";
         }
 
+        // --- Nuevo: handler de protección contra teclado rápido/escáner (solo TextInput) ---
+        private void FastInput_PreviewTextInput(object? sender, TextCompositionEventArgs e)
+        {
+            var now = DateTime.UtcNow;
+            // Si la última entrada fue muy reciente, descartamos (probable escaneo)
+            if ((now - _lastTextInputTime).TotalMilliseconds < FastInputThresholdMs)
+            {
+                e.Handled = true;
+                return;
+            }
+
+            // Aceptamos esta entrada y actualizamos tiempo
+            _lastTextInputTime = now;
+        }
+
+        private void ProtectedTextBox_PasteHandler(object sender, DataObjectPastingEventArgs e)
+        {
+            // Evitar pegado inmediato si ha habido entrada muy rápida (probable escaner)
+            var now = DateTime.UtcNow;
+            if ((now - _lastTextInputTime).TotalMilliseconds < 200)
+            {
+                e.CancelCommand();
+                return;
+            }
+            // Dejar comportamiento normal en otros casos
+        }
+
+        // Handler: sólo permitir dígitos y COMA. Si el usuario escribe punto, lo convertimos a coma.
+        private void Precio_PreviewTextInput(object sender, TextCompositionEventArgs e)
+        {
+            if (sender is not TextBox tb)
+            {
+                e.Handled = true;
+                return;
+            }
+
+            var input = e.Text;
+
+            // Si escriben punto, lo convertimos a coma (si es válido)
+            if (input == "." )
+            {
+                // Si ya hay una coma y no hay selección que la reemplace, rechazamos
+                var proposed = tb.Text.Remove(tb.SelectionStart, tb.SelectionLength).Insert(tb.SelectionStart, ",");
+                if (proposed.Count(c => c == ',') > 1)
+                {
+                    e.Handled = true;
+                    return;
+                }
+
+                // Insertar la coma manualmente
+                tb.SelectedText = ",";
+                // colocar caret después del carácter insertado
+                tb.CaretIndex = tb.SelectionStart + 1;
+                e.Handled = true;
+                return;
+            }
+
+            // Validar que sólo se escriban dígitos o coma
+            if (!RegexPrecioInput.IsMatch(input))
+            {
+                e.Handled = true;
+                return;
+            }
+
+            // Si se intenta insertar coma y ya existe otra (fuera de selección), rechazar
+            if (input == ",")
+            {
+                var proposed2 = tb.Text.Remove(tb.SelectionStart, tb.SelectionLength).Insert(tb.SelectionStart, ",");
+                if (proposed2.Count(c => c == ',') > 1)
+                {
+                    e.Handled = true;
+                    return;
+                }
+            }
+
+            // permitido
+            e.Handled = false;
+        }
+
+        // Maneja pegado en los campos de precio: normaliza puntos->comas y valida formato (sólo dígitos y una coma)
+        private void Precio_PasteHandler(object sender, DataObjectPastingEventArgs e)
+        {
+            if (!e.SourceDataObject.GetDataPresent(DataFormats.UnicodeText))
+            {
+                e.CancelCommand();
+                return;
+            }
+
+            var raw = (string)e.SourceDataObject.GetData(DataFormats.UnicodeText)!;
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                e.CancelCommand();
+                return;
+            }
+
+            // Normalizar: reemplazar puntos por comas y limpiar espacios
+            var normalized = raw.Replace('.', ',').Trim();
+
+            // Validación: sólo dígitos y una coma opcional, hasta 2 decimales
+            if (!Regex.IsMatch(normalized, @"^\d+(,\d{0,2})?$"))
+            {
+                // si no cumple, cancelar pegado
+                e.CancelCommand();
+                return;
+            }
+
+            // Insertar el texto normalizado en el TextBox (cancelamos el pegado predeterminado)
+            e.CancelCommand();
+            if (sender is TextBox tb)
+            {
+                tb.SelectedText = normalized;
+                tb.CaretIndex = tb.SelectionStart + normalized.Length;
+            }
+        }
+
+        // --- resto del código existente (sin cambios en validaciones / lógica) ---
         private void ConstruirIndiceProductos()
         {
             try
             {
-                var lista = _productoService.ObtenerTodos();
+                var lista = _producto_service_obtener_todos_safe();
                 var dict = new Dictionary<string, Producto>(StringComparer.OrdinalIgnoreCase);
 
                 foreach (var p in lista.Where(p => !string.IsNullOrWhiteSpace(p.CodigoBarras)))
@@ -139,9 +293,11 @@ namespace System_Market.Views
             codigo = NormalizarCodigo(codigo);
             if (string.IsNullOrEmpty(codigo)) return;
 
-            // Solo rellenar el textbox y validar visualmente, sin mostrar MessageBox intrusivo
-            txtCodigoBarras.Text = codigo; // Dispara TextChanged -> VerificarCodigoExistente
+            // Rellena SOLO txtCodigoBarras
+            txtCodigoBarras.Text = codigo;
             txtCodigoBarras.CaretIndex = codigo.Length;
+            // Poner foco en el control de código para que quede claro al usuario:
+            txtCodigoBarras.Focus();
         }
 
         private void TxtCodigoBarras_TextChanged(object sender, TextChangedEventArgs e)
@@ -149,7 +305,7 @@ namespace System_Market.Views
             VerificarCodigoExistente(txtCodigoBarras.Text);
         }
 
-        // Actualiza un TextBlock de estado (txtEstadoCodigo) si existe
+        // Actualiza un TextBlock de estado (txtEstadoCodigo) si exista
         private void ActualizarEstadoCodigo(string texto, Brush? color = null)
         {
             if (txtEstadoCodigo == null) return;
@@ -174,21 +330,18 @@ namespace System_Market.Views
 
             Producto? existente = null;
 
-            // Construir variantes de búsqueda (normal, sin ceros y padded EAN13)
             var variantes = new List<string> { codigo };
             var sinCeros = RemoverCerosIzquierda(codigo);
             if (!string.IsNullOrEmpty(sinCeros) && !variantes.Contains(sinCeros)) variantes.Add(sinCeros);
             var pad13 = PadEAN13(sinCeros);
             if (!string.IsNullOrEmpty(pad13) && !variantes.Contains(pad13)) variantes.Add(pad13);
 
-            // 1) Buscar en índice por cualquiera de las variantes
             foreach (var v in variantes)
             {
                 if (_indexProductos.TryGetValue(v, out existente))
                     break;
             }
 
-            // 2) Si no encontrado, intento directo en BD para cada variante
             if (existente == null)
             {
                 foreach (var v in variantes)
@@ -197,19 +350,17 @@ namespace System_Market.Views
                     if (directo != null)
                     {
                         existente = directo;
-                        // actualizar índice para futuras búsquedas
                         try { _indexProductos[v] = directo; } catch { }
                         break;
                     }
                 }
             }
 
-            // 3) Fallback: enumerar todos y comparar normalizado (por si hay otros formatos)
             if (existente == null)
             {
                 try
                 {
-                    var lista = _productoService.ObtenerTodos();
+                    var lista = _producto_service_obtener_todos_safe();
                     existente = lista.FirstOrDefault(p =>
                         !string.IsNullOrWhiteSpace(p.CodigoBarras) &&
                         NormalizarCodigo(p.CodigoBarras) == codigo);
@@ -220,11 +371,9 @@ namespace System_Market.Views
                 }
                 catch
                 {
-                    // ignorar
                 }
             }
 
-            // Si existe y no es el mismo registro cuando estamos en edición -> marcado de duplicado
             if (existente != null && (!_esEdicion || existente.Id != (Producto?.Id ?? 0)))
             {
                 txtCodigoBarras.BorderBrush = Brushes.OrangeRed;
@@ -272,7 +421,6 @@ namespace System_Market.Views
                 return;
             }
 
-            // Unicidad: si detectamos un producto distinto con ese código, impedir guardar (modal)
             if (_codigoExiste && (_esEdicion == false || (_productoConEseCodigo?.Id ?? 0) != (Producto?.Id ?? 0)))
             {
                 MessageBox.Show($"No se puede guardar. El código ya pertenece a '{_productoConEseCodigo?.Nombre}' (ID {_productoConEseCodigo?.Id}).",
@@ -282,7 +430,6 @@ namespace System_Market.Views
                 return;
             }
 
-            // Validación por campos: NOTIFICACIONES INLINE en lugar de modal
             if (string.IsNullOrWhiteSpace(txtNombre.Text))
             {
                 ActualizarEstadoCodigo("Complete el nombre del producto.", Brushes.OrangeRed);
@@ -304,7 +451,7 @@ namespace System_Market.Views
                 return;
             }
 
-            if (!decimal.TryParse(txtPrecioCompra.Text, NumberStyles.Number, CultureInfo.InvariantCulture, out decimal precioCompra) || precioCompra < 0)
+            if (!CurrencyService.TryParseSoles(txtPrecioCompra.Text, out decimal precioCompra) || precioCompra < 0)
             {
                 ActualizarEstadoCodigo("Ingrese un precio de compra válido.", Brushes.OrangeRed);
                 txtPrecioCompra.Focus();
@@ -312,7 +459,7 @@ namespace System_Market.Views
                 return;
             }
 
-            if (!decimal.TryParse(txtPrecioVenta.Text, NumberStyles.Number, CultureInfo.InvariantCulture, out decimal precioVenta) || precioVenta < 0)
+            if (!CurrencyService.TryParseSoles(txtPrecioVenta.Text, out decimal precioVenta) || precioVenta < 0)
             {
                 ActualizarEstadoCodigo("Ingrese un precio de venta válido.", Brushes.OrangeRed);
                 txtPrecioVenta.Focus();
@@ -328,7 +475,6 @@ namespace System_Market.Views
                 return;
             }
 
-            // --- CONFIRMACIÓN DE CAMBIOS EN EDICIÓN ---
             if (_esEdicion && Producto != null)
             {
                 var cambios = "";
@@ -337,11 +483,11 @@ namespace System_Market.Views
                 if (Producto.Nombre != txtNombre.Text.Trim())
                     cambios += $"- Nombre: '{Producto.Nombre}' → '{txtNombre.Text.Trim()}'\n";
                 if (Producto.CategoriaId != (int)cbCategoria.SelectedValue)
-                {
+                    {
                     var catAnt = (cbCategoria.ItemsSource as IEnumerable<Categoria>)?.FirstOrDefault(c => c.Id == Producto.CategoriaId)?.Nombre ?? "";
                     var catNue = (cbCategoria.SelectedItem as Categoria)?.Nombre ?? "";
                     cambios += $"- Categoría: '{catAnt}' → '{catNue}'\n";
-                }
+                    }
                 if (Producto.ProveedorId != (int)cbProveedor.SelectedValue)
                 {
                     var provAnt = (cbProveedor.ItemsSource as IEnumerable<Proveedor>)?.FirstOrDefault(p => p.Id == Producto.ProveedorId)?.Nombre ?? "";
@@ -349,9 +495,9 @@ namespace System_Market.Views
                     cambios += $"- Proveedor: '{provAnt}' → '{provNue}'\n";
                 }
                 if (Producto.PrecioCompra != precioCompra)
-                    cambios += $"- Precio de compra: {Producto.PrecioCompra} → {precioCompra}\n";
+                    cambios += $"- Precio de compra: {CurrencyService.FormatNumber(Producto.PrecioCompra, "N2")} → {CurrencyService.FormatNumber(precioCompra, "N2")}\n";
                 if (Producto.PrecioVenta != precioVenta)
-                    cambios += $"- Precio de venta: {Producto.PrecioVenta} → {precioVenta}\n";
+                    cambios += $"- Precio de venta: {CurrencyService.FormatNumber(Producto.PrecioVenta, "N2")} → {CurrencyService.FormatNumber(precioVenta, "N2")}\n";
                 if (Producto.Stock != stock)
                     cambios += $"- Stock: {Producto.Stock} → {stock}\n";
 
@@ -363,8 +509,24 @@ namespace System_Market.Views
                         return;
                 }
             }
+            else
+            {
+                // Confirmación al agregar: mostrar resumen del nuevo producto
+                var catNombre = (cbCategoria.SelectedItem as Categoria)?.Nombre ?? "";
+                var provNombre = (cbProveedor.SelectedItem as Proveedor)?.Nombre ?? "";
+                var resumen = $"Se agregará el siguiente producto:\n\n" +
+                              $"- Código: {codigo}\n" +
+                              $"- Nombre: {txtNombre.Text.Trim()}\n" +
+                              $"- Categoría: {catNombre}\n" +
+                              $"- Proveedor: {provNombre}\n" +
+                              $"- Precio compra: {CurrencyService.FormatNumber(precioCompra, "N2")}\n" +
+                              $"- Precio venta: {CurrencyService.FormatNumber(precioVenta, "N2")}\n" +
+                              $"- Stock: {stock}\n\n¿Desea continuar?";
+                var confirmAdd = MessageBox.Show(resumen, "Confirmar agregado", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                if (confirmAdd != MessageBoxResult.Yes)
+                    return;
+            }
 
-            // Todo OK: limpiar estado y aceptar
             ActualizarEstadoCodigo("Listo", Brushes.LightGreen);
 
             Producto ??= new Producto();
@@ -384,7 +546,38 @@ namespace System_Market.Views
         public void CargarDatosDesdeCodigoBarras(string codigo)
         {
             txtCodigoBarras.Text = codigo;
-            // Puedes agregar más lógica si lo necesitas
+        }
+
+        private void Stock_PreviewTextInput(object sender, TextCompositionEventArgs e)
+        {
+            e.Handled = !RegexEntero.IsMatch(e.Text);
+        }
+
+        private void Stock_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Space)
+            {
+                e.Handled = true;
+                return;
+            }
+        }
+
+        private void Stock_PasteHandler(object sender, DataObjectPastingEventArgs e)
+        {
+            if (!e.SourceDataObject.GetDataPresent(DataFormats.UnicodeText))
+            {
+                e.CancelCommand();
+                return;
+            }
+            var txt = (string)e.SourceDataObject.GetData(DataFormats.UnicodeText)!;
+            if (!RegexEntero.IsMatch(txt))
+                e.CancelCommand();
+        }
+
+        private List<Producto> _producto_service_obtener_todos_safe()
+        {
+            try { return _productoService.ObtenerTodos(); }
+            catch { return new List<Producto>(); }
         }
     }
 }

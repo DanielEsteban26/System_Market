@@ -3,185 +3,341 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         Title="Historial de Ventas"
-        Height="600" Width="980"
+        Height="718" Width="1102"
         MinHeight="520" MinWidth="860"
         WindowStartupLocation="CenterOwner"
-        Background="{DynamicResource MaterialDesignPaper}"
+        Background="{DynamicResource MainBgLocal}"
         FontFamily="Segoe UI"
         UseLayoutRounding="True"
         SnapsToDevicePixels="True">
 
     <Window.Resources>
-        <!-- Paleta de botones local -->
-        <SolidColorBrush x:Key="BrushBtnPrimary" Color="#3F51B5"/>
-        <SolidColorBrush x:Key="BrushBtnAccent"  Color="#7E57C2"/>
-        <SolidColorBrush x:Key="BrushBtnDanger"  Color="#EF5350"/>
-        <SolidColorBrush x:Key="BrushBtnNeutral" Color="#607D8B"/>
+        <!-- Paleta local -->
+        <LinearGradientBrush x:Key="MainBgLocal" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#0F3F68" Offset="0"/>
+            <GradientStop Color="#15B6C9" Offset="1"/>
+        </LinearGradientBrush>
+
+        <SolidColorBrush x:Key="CardBg" Color="#1D2734"/>
+        <SolidColorBrush x:Key="CardBgLight" Color="#232B3E"/>
+        <SolidColorBrush x:Key="AccentTeal" Color="#19C1D3"/>
+        <SolidColorBrush x:Key="HeaderText" Color="#E8F6F9"/>
+        <SolidColorBrush x:Key="RowDivider" Color="#2C3B47"/>
+
+        <!-- Botones -->
+        <Style x:Key="PrimaryButton" TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="#7B1FA2"/>
+            <Setter Property="BorderBrush" Value="#4B3560"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="MinHeight" Value="44"/>
+            <Setter Property="MinWidth" Value="110"/>
+            <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="10"
+                                Padding="{TemplateBinding Padding}">
+                            <Border.RenderTransform>
+                                <ScaleTransform ScaleX="1" ScaleY="1"/>
+                            </Border.RenderTransform>
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="8" ShadowDepth="3" Color="#22000000"/>
+                            </Border.Effect>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <ScaleTransform ScaleX="1.03" ScaleY="1.03"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <ScaleTransform ScaleX="0.98" ScaleY="0.98"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.6"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="AccentButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+            <Setter Property="Background" Value="#0288D1"/>
+            <Setter Property="BorderBrush" Value="#026C99"/>
+        </Style>
+
+        <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+            <Setter Property="Background" Value="#EF5350"/>
+            <Setter Property="BorderBrush" Value="#C2423A"/>
+        </Style>
+
+        <Style x:Key="NeutralButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+            <Setter Property="Background" Value="#607D8B"/>
+            <Setter Property="BorderBrush" Value="#4B6168"/>
+        </Style>
+
+        <!-- DataGrid -->
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Foreground" Value="{StaticResource AccentTeal}"/>
+            <Setter Property="Background" Value="{StaticResource CardBgLight}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="BorderBrush" Value="{StaticResource RowDivider}"/>
+        </Style>
+
+        <Style x:Key="DataGridCellWhite" TargetType="DataGridCell">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="3,1,3,1"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="BorderBrush" Value="{StaticResource RowDivider}"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#0EFFFFFF"/>
+                </Trigger>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#1F1F1F"/>
+                    <Setter Property="Foreground" Value="White"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="DataGridTextBlockWhite" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="4,0,4,0"/>
+        </Style>
+
+        <!-- Fila más compacta -->
+        <Style TargetType="DataGridRow" x:Key="EnhancedDataGridRow">
+            <Setter Property="MinHeight" Value="18"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Cursor" Value="Arrow"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Cursor" Value="Hand"/>
+                </Trigger>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#1522242A"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
     </Window.Resources>
 
-    <Grid Margin="16">
+    <Grid Margin="14">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <!-- Encabezado -->
-            <RowDefinition Height="*"/>
-            <!-- Ventas -->
-            <RowDefinition Height="Auto"/>
-            <!-- Splitter -->
-            <RowDefinition Height="1.5*"/>
-            <!-- Detalles (más grande) -->
-            <RowDefinition Height="Auto"/>
-            <!-- Acciones -->
+            <RowDefinition Height="Auto"/> <!-- Título -->
+            <RowDefinition Height="Auto"/> <!-- Tarjeta superior (Listado de ventas) - no se redimensiona -->
+            <RowDefinition Height="Auto"/> <!-- Tarjeta con dgVentas (fija/scroll) -->
+            <RowDefinition Height="Auto"/> <!-- GridSplitter (fila propia) -->
+            <RowDefinition Height="*"/>    <!-- Tarjeta detalles (resizable) -->
         </Grid.RowDefinitions>
 
-        <!-- Encabezado -->
-        <DockPanel Grid.Row="0" Margin="0,0,0,12">
-            <TextBlock Text="Historial de ventas"
-                       FontSize="20" FontWeight="Bold"
-                       Foreground="{DynamicResource PrimaryHueMidBrush}"/>
-        </DockPanel>
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12" VerticalAlignment="Center">
+            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8BB;" FontSize="20" Foreground="{StaticResource AccentTeal}" Margin="0,0,8,0"/>
+            <TextBlock Text="Historial de ventas" FontSize="26" FontWeight="Bold" Foreground="{StaticResource HeaderText}"/>
+        </StackPanel>
 
-        <!-- Ventas -->
-        <materialDesign:Card Grid.Row="1"
-                             Padding="12" Margin="0,0,0,10"
-                             Background="{DynamicResource MaterialDesignCardBackground}"
-                             materialDesign:ShadowAssist.ShadowDepth="Depth2">
+        <Border Grid.Row="1" CornerRadius="10" Background="{StaticResource CardBgLight}" Padding="12" Margin="0,0,0,12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Text="Listado de ventas" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource HeaderText}" VerticalAlignment="Center"/>
+
+                <!-- REEMPLAZADO: filtros por fecha en lugar de botones Refrescar / Cerrar -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <StackPanel Orientation="Vertical" Margin="0,0,8,0">
+                        <TextBlock Text="Desde" Foreground="{StaticResource HeaderText}" FontSize="11" Margin="2,0,0,2"/>
+                        <DatePicker x:Name="dpDesdeVenta" Width="150"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Vertical" Margin="0,0,8,0">
+                        <TextBlock Text="Hasta" Foreground="{StaticResource HeaderText}" FontSize="11" Margin="2,0,0,2"/>
+                        <DatePicker x:Name="dpHastaVenta" Width="150"/>
+                    </StackPanel>
+                    <Button x:Name="btnAplicarFiltroVenta" Click="BtnAplicarFiltroVenta_Click" Style="{StaticResource AccentButton}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8FB;" Margin="0,0,6,0"/>
+                            <TextBlock Text="Aplicar"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Ventas: Auto + MaxHeight para que no crezca -->
+        <Border Grid.Row="2" CornerRadius="12" Background="{StaticResource CardBg}" Padding="12" Margin="0,0,0,8">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/> <!-- paginación -->
                 </Grid.RowDefinitions>
 
-                <TextBlock Grid.Row="0" Text="Ventas"
-                           FontWeight="SemiBold" Margin="0,0,0,8"
-                           Foreground="{DynamicResource MaterialDesignBody}"/>
+                <TextBlock Grid.Row="0" Text="Ventas" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource HeaderText}" Margin="6,0,0,12"/>
 
                 <DataGrid x:Name="dgVentas"
                           Grid.Row="1"
                           AutoGenerateColumns="False"
+                          CanUserAddRows="False"
                           IsReadOnly="True"
                           SelectionMode="Single"
                           SelectionChanged="dgVentas_SelectionChanged"
+                          Style="{StaticResource {x:Type DataGrid}}"
+                          RowStyle="{StaticResource EnhancedDataGridRow}"
                           Background="Transparent"
                           BorderThickness="0"
                           HeadersVisibility="Column"
                           AlternationCount="2"
-                          AlternatingRowBackground="#0FFFFFFF"
-                          materialDesign:DataGridAssist.CellPadding="10,6,10,6"
-                          materialDesign:DataGridAssist.ColumnHeaderPadding="10,8,10,8">
+                          AlternatingRowBackground="#0F000000"
+                          materialDesign:DataGridAssist.CellPadding="3,1,3,1"
+                          materialDesign:DataGridAssist.ColumnHeaderPadding="12,8,12,8"
+                          RowHeight="22"
+                          MaxHeight="280"
+                          MinHeight="80">
+                    <DataGrid.Resources>
+                        <Style TargetType="DataGridCell" BasedOn="{StaticResource DataGridCellWhite}"/>
+                    </DataGrid.Resources>
+
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Usuario" Binding="{Binding UsuarioNombre}" Width="200"/>
-                        <DataGridTextColumn Header="Fecha" Binding="{Binding Fecha, StringFormat={}{0:dd/MM/yyyy HH:mm}}" Width="170"/>
-                        <DataGridTextColumn Header="Total" Binding="{Binding Total, StringFormat={}{0:N2}}" Width="110"/>
-                        <DataGridTextColumn Header="Estado" Binding="{Binding Estado}" Width="110"/>
-                        <DataGridTextColumn Header="Motivo Anulación" Binding="{Binding MotivoAnulacion}" Width="*"/>
+                        <DataGridTextColumn Header="Usuario" Binding="{Binding UsuarioNombre}" Width="220">
+                            <DataGridTextColumn.ElementStyle>
+                                <StaticResource ResourceKey="DataGridTextBlockWhite"/>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <DataGridTextColumn Header="Fecha" Binding="{Binding Fecha, StringFormat={}{0:dd/MM/yyyy HH:mm}}" Width="200">
+                            <DataGridTextColumn.ElementStyle>
+                                <StaticResource ResourceKey="DataGridTextBlockWhite"/>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <DataGridTextColumn Header="Total" Binding="{Binding Total, StringFormat={}{0:N2}}" Width="120" ElementStyle="{StaticResource ResourceKey=DataGridTextBlockWhite}"/>
+                        <DataGridTextColumn Header="Estado" Binding="{Binding Estado}" Width="120" ElementStyle="{StaticResource ResourceKey=DataGridTextBlockWhite}"/>
+                        <DataGridTextColumn Header="Motivo Anulación" Binding="{Binding MotivoAnulacion}" Width="*">
+                            <DataGridTextColumn.ElementStyle>
+                                <StaticResource ResourceKey="DataGridTextBlockWhite"/>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
                     </DataGrid.Columns>
                 </DataGrid>
-            </Grid>
-        </materialDesign:Card>
 
-        <!-- Splitter para redimensionar -->
-        <GridSplitter Grid.Row="2"
+                <!-- PAGINACIÓN -->
+                <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+                    <Button x:Name="btnPrevPageVenta" Click="BtnPrevPageVenta_Click" Style="{StaticResource NeutralButton}" Margin="0,0,8,0" Width="100">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE72B;" Margin="0,0,6,0"/>
+                            <TextBlock Text="Anterior"/>
+                        </StackPanel>
+                    </Button>
+                    <TextBlock x:Name="txtPageInfoVenta" Foreground="{StaticResource HeaderText}" VerticalAlignment="Center" Margin="0,0,12,0" />
+                    <Button x:Name="btnNextPageVenta" Click="BtnNextPageVenta_Click" Style="{StaticResource AccentButton}" Width="100">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE72A;" Margin="0,0,6,0"/>
+                            <TextBlock Text="Siguiente"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- GridSplitter en su propia fila: mueve sólo la sección de detalles -->
+        <GridSplitter Grid.Row="3"
                       Height="8"
                       HorizontalAlignment="Stretch"
-                      Background="#33000000"
-                      ShowsPreview="True"/>
+                      VerticalAlignment="Center"
+                      Background="#22000000"
+                      ShowsPreview="True"
+                      ResizeDirection="Rows"
+                      ResizeBehavior="PreviousAndNext"
+                      Margin="0,0,0,0"/>
 
-        <!-- Detalles -->
-        <materialDesign:Card Grid.Row="3"
-                             Padding="12" Margin="0,12,0,12"
-                             Background="{DynamicResource MaterialDesignCardBackground}"
-                             materialDesign:ShadowAssist.ShadowDepth="Depth1">
+        <!-- Detalles: ocupa la fila '*' y será la que cambie -->
+        <Border Grid.Row="4" CornerRadius="12" Background="{StaticResource CardBgLight}" Padding="12" Margin="0,12,0,0">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <TextBlock Grid.Row="0" Text="Detalles de la venta seleccionada"
-                           FontWeight="SemiBold" Margin="0,0,0,8"
-                           Foreground="{DynamicResource MaterialDesignBody}"/>
+                <TextBlock Grid.Row="0" Text="Detalles de la venta seleccionada" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource HeaderText}" Margin="4,0,0,8"/>
 
                 <DataGrid x:Name="dgDetallesVenta"
                           Grid.Row="1"
                           AutoGenerateColumns="False"
+                          CanUserAddRows="False"
                           IsReadOnly="True"
+                          RowStyle="{StaticResource EnhancedDataGridRow}"
                           Background="Transparent"
                           BorderThickness="0"
                           HeadersVisibility="Column"
                           AlternationCount="2"
-                          AlternatingRowBackground="#0FFFFFFF"
-                          materialDesign:DataGridAssist.CellPadding="10,6,10,6"
-                          materialDesign:DataGridAssist.ColumnHeaderPadding="10,8,10,8">
+                          AlternatingRowBackground="#0F000000"
+                          materialDesign:DataGridAssist.CellPadding="3,1,3,1"
+                          materialDesign:DataGridAssist.ColumnHeaderPadding="12,8,12,8"
+                          RowHeight="22">
+                    <DataGrid.Resources>
+                        <Style TargetType="DataGridCell" BasedOn="{StaticResource DataGridCellWhite}"/>
+                    </DataGrid.Resources>
+
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Producto" Binding="{Binding ProductoNombre}" Width="*"/>
-                        <DataGridTextColumn Header="Cantidad" Binding="{Binding Cantidad}" Width="120"/>
-                        <DataGridTextColumn Header="Precio Unitario" Binding="{Binding PrecioUnitario, StringFormat={}{0:N2}}" Width="150"/>
-                        <DataGridTextColumn Header="Subtotal" Binding="{Binding Subtotal, StringFormat={}{0:N2}}" Width="150"/>
+                        <DataGridTextColumn Header="Producto" Binding="{Binding ProductoNombre}" Width="*">
+                            <DataGridTextColumn.ElementStyle>
+                                <StaticResource ResourceKey="DataGridTextBlockWhite"/>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Cantidad" Binding="{Binding Cantidad}" Width="120" ElementStyle="{StaticResource ResourceKey=DataGridTextBlockWhite}"/>
+                        <DataGridTextColumn Header="Precio Unitario" Binding="{Binding PrecioUnitario, StringFormat={}{0:N2}}" Width="150" ElementStyle="{StaticResource ResourceKey=DataGridTextBlockWhite}"/>
+                        <DataGridTextColumn Header="Subtotal" Binding="{Binding Subtotal, StringFormat={}{0:N2}}" Width="150" ElementStyle="{StaticResource ResourceKey=DataGridTextBlockWhite}"/>
                     </DataGrid.Columns>
                 </DataGrid>
+
+                <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+                    <Button x:Name="btnAnularVenta" Click="btnAnularVenta_Click" Style="{StaticResource DangerButton}" Margin="0,0,8,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE7E8;" Margin="0,0,6,0"/>
+                            <TextBlock Text="Anular venta"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="btnRefrescar" Click="btnRefrescar_Click" Style="{StaticResource AccentButton}" Margin="0,0,8,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE863;" Margin="0,0,6,0"/>
+                            <TextBlock Text="Refrescar"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="btnCerrar" Click="btnCerrar_Click" Style="{StaticResource NeutralButton}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8BB;" Margin="0,0,6,0"/>
+                            <TextBlock Text="Cerrar"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
             </Grid>
-        </materialDesign:Card>
-
-        <!-- Acciones -->
-        <DockPanel Grid.Row="4">
-            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
-                <Button x:Name="btnAnularVenta"
-                        Padding="14,6"
-                        Margin="0,0,8,0"
-                        Click="btnAnularVenta_Click"
-                        Background="{StaticResource BrushBtnDanger}"
-                        Foreground="White"
-                        ToolTip="Anular la venta seleccionada"
-                        IsEnabled="False">
-                    <Button.Style>
-                        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
-                            <Setter Property="IsEnabled" Value="True"/>
-                            <Style.Triggers>
-                                <!-- Deshabilita si no hay selección -->
-                                <DataTrigger Binding="{Binding SelectedItem, ElementName=dgVentas}" Value="{x:Null}">
-                                    <Setter Property="IsEnabled" Value="False"/>
-                                </DataTrigger>
-                                <!-- Habilita solo si Estado == Activa -->
-                                <DataTrigger Value="Activa">
-                                    <DataTrigger.Binding>
-                                        <Binding ElementName="dgVentas" Path="SelectedItem.Estado"/>
-                                    </DataTrigger.Binding>
-                                    <Setter Property="IsEnabled" Value="True"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE711;" Margin="0,0,6,0"/>
-                        <TextBlock Text="Anular venta"/>
-                    </StackPanel>
-                </Button>
-
-                <Button x:Name="btnRefrescar"
-                        Padding="14,6"
-                        Margin="0,0,8,0"
-                        Click="btnRefrescar_Click"
-                        Background="{StaticResource BrushBtnPrimary}"
-                        Foreground="White"
-                        ToolTip="Recargar historial">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE72C;" Margin="0,0,6,0"/>
-                        <TextBlock Text="Refrescar"/>
-                    </StackPanel>
-                </Button>
-
-                <Button x:Name="btnCerrar"
-                        Padding="14,6"
-                        Click="btnCerrar_Click"
-                        Background="{StaticResource BrushBtnNeutral}"
-                        Foreground="White"
-                        ToolTip="Cerrar ventana">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8BB;" Margin="0,0,6,0"/>
-                        <TextBlock Text="Cerrar"/>
-                    </StackPanel>
-                </Button>
-            </StackPanel>
-        </DockPanel>
+        </Border>
     </Grid>
 </Window>

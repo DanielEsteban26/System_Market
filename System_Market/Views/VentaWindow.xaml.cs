@@ -99,14 +99,18 @@ namespace System_Market.Views
         {
             await CargarCacheProductosAsync();
 
-            // Ocultar el botón "Agregar producto" en la ventana de ventas (función movida fuera de ventas)
+            // Ocultar el botón "Agregar producto" en la ventana de ventas (si existe)
+            // Evita referencias directas a un control que puede haber sido eliminado del XAML.
             try
             {
-                btnAgregarProducto.Visibility = Visibility.Collapsed;
+                if (this.FindName("btnAgregarProducto") is Button btn)
+                {
+                    btn.Visibility = Visibility.Collapsed;
+                }
             }
             catch
             {
-                // Si el control no existe por alguna razón, no romper la carga.
+                // No romper la carga si algo falla; FindName no debería lanzar, pero por seguridad dejamos el catch.
             }
 
             // Replay tras tener cache (solo aquí para evitar doble procesamiento al crear con código inicial)
@@ -418,6 +422,24 @@ namespace System_Market.Views
                 }
             }
 
+            // Construir resumen para confirmación previa
+            var sb = new StringBuilder();
+            sb.AppendLine("Confirme la venta con los siguientes productos:");
+            sb.AppendLine();
+            foreach (var d in detalleVenta)
+            {
+                sb.AppendLine($"{d.ProductoNombre} | Cant: {d.Cantidad} | Precio: {d.PrecioUnitario:C} | Subtotal: {d.Subtotal:C}");
+            }
+            sb.AppendLine();
+            decimal total = detalleVenta.Sum(d => d.Subtotal);
+            sb.AppendLine($"Total: {total:C}");
+            sb.AppendLine();
+            sb.AppendLine("¿Está todo correcto?");
+
+            var confirmar = MessageBox.Show(sb.ToString(), "Confirmar venta", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (confirmar != MessageBoxResult.Yes)
+                return;
+
             try
             {
                 var venta = new Venta
@@ -430,20 +452,7 @@ namespace System_Market.Views
 
                 int ventaId = ventaService.AgregarVentaConDetalles(venta, detalleVenta.ToList());
 
-                // Obtener últimas ventas para verificar en qué UsuarioId se guardó
-                var ultimas = ventaService.ObtenerTodas()
-                    .OrderByDescending(v => v.Id)
-                    .Take(5)
-                    .Select(v => $"{v.Id} | UsuarioId={v.UsuarioId} | Usuario='{v.UsuarioNombre}' | Total={v.Total:C} | {v.Fecha:yyyy-MM-dd HH:mm}")
-                    .ToList();
-
-                var info = new StringBuilder();
-                info.AppendLine($"Venta registrada (ID: {ventaId}).");
-                info.AppendLine($"UsuarioId usado al insertar: {venta.UsuarioId}");
-                info.AppendLine("Últimas ventas (desc):");
-                foreach (var l in ultimas) info.AppendLine(l);
-
-                MessageBox.Show(info.ToString(), "Verificación Venta", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show($"Venta registrada correctamente. Id: {ventaId}", "Venta", MessageBoxButton.OK, MessageBoxImage.Information);
 
                 detalleVenta.Clear();
                 ActualizarTotales();

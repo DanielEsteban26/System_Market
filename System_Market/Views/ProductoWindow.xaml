@@ -3,182 +3,280 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         Title="Gestión de Productos"
-        Height="600" Width="1134"
+        Height="654" Width="1134"
         MinHeight="520" MinWidth="860"
         WindowStartupLocation="CenterOwner"
-        Background="{DynamicResource MaterialDesignPaper}"
+        Background="{DynamicResource MainBg}"
         FontFamily="Segoe UI"
         UseLayoutRounding="True"
         SnapsToDevicePixels="True">
 
     <Window.Resources>
-        <!-- Paleta local de botones -->
-        <SolidColorBrush x:Key="BrushBtnPrimary" Color="#3F51B5"/>
-        <SolidColorBrush x:Key="BrushBtnAccent"  Color="#0288D1"/>
-        <SolidColorBrush x:Key="BrushBtnDanger"  Color="#EF5350"/>
-        <SolidColorBrush x:Key="BrushBtnNeutral" Color="#607D8B"/>
+        <!-- Fondo principal (gradiente) -->
+        <LinearGradientBrush x:Key="MainBg" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#1A2980" Offset="0"/>
+            <GradientStop Color="#26D0CE" Offset="1"/>
+        </LinearGradientBrush>
+
+        <!-- Paleta local (se conservan por si se usan en otros elementos) -->
+        <SolidColorBrush x:Key="CardBg" Color="#1D2734"/>
+        <SolidColorBrush x:Key="CardBgLight" Color="#232B3E"/>
+        <SolidColorBrush x:Key="AccentTeal" Color="#19C1D3"/>
+        <SolidColorBrush x:Key="HeaderText" Color="#E8F6F9"/>
+        <SolidColorBrush x:Key="RowStrip1" Color="#0CFFFFFF"/>
+        <SolidColorBrush x:Key="RowStrip2" Color="#16000000"/>
+
+        <!-- Botones estilo (coherente con MainWindow) -->
+        <Style x:Key="PrimaryButton" TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="#7B1FA2"/>
+            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="MinHeight" Value="48"/>
+            <Setter Property="MinWidth" Value="110"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="18" Padding="{TemplateBinding Padding}">
+                            <Border.RenderTransform>
+                                <ScaleTransform ScaleX="1" ScaleY="1"/>
+                            </Border.RenderTransform>
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="8" ShadowDepth="2" Color="#22000000"/>
+                            </Border.Effect>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="Bd"
+                                                             Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                                             To="1.06" Duration="0:0:0.12"/>
+                                            <DoubleAnimation Storyboard.TargetName="Bd"
+                                                             Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                                                             To="1.06" Duration="0:0:0.12"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="Bd"
+                                                             Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                                             To="1" Duration="0:0:0.12"/>
+                                            <DoubleAnimation Storyboard.TargetName="Bd"
+                                                             Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                                                             To="1" Duration="0:0:0.12"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <ScaleTransform ScaleX="0.98" ScaleY="0.98"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+
+                            <!-- NUEVO: aspecto cuando el botón está deshabilitado -->
+                            <Trigger Property="IsEnabled" Value="False">
+                                <!-- reduce opacidad del borde (se ve 'apagado') -->
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.55"/>
+                                <!-- quitar sombra para reforzar estado deshabilitado -->
+                                <Setter TargetName="Bd" Property="Effect" Value="{x:Null}"/>
+                                <!-- mostrar cursor por defecto -->
+                                <Setter Property="Cursor" Value="Arrow"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="AccentButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+            <Setter Property="Background" Value="#0288D1"/>
+        </Style>
+        <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+            <Setter Property="Background" Value="#EF5350"/>
+        </Style>
+        <Style x:Key="NeutralButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+            <Setter Property="Background" Value="#607D8B"/>
+        </Style>
+
+        <!-- Botones de paginación (pequeños) -->
+        <Style x:Key="PageNavButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="Width" Value="44"/>
+            <Setter Property="Height" Value="44"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="MinWidth" Value="44"/>
+            <Setter Property="MinHeight" Value="44"/>
+        </Style>
+
+        <!-- Estilo para botones pequeños tipo 'Buscar' -->
+        <Style x:Key="SearchButton" TargetType="Button" BasedOn="{StaticResource AccentButton}">
+            <Setter Property="MinWidth" Value="120"/>
+            <Setter Property="MinHeight" Value="44"/>
+        </Style>
+
+        <!-- DataGrid look: encabezados y filas -->
+        <Style TargetType="DataGrid" x:Key="NiceDataGrid">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="RowBackground" Value="#0F000000"/>
+            <Setter Property="AlternatingRowBackground" Value="#14000000"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="#1FFFFFFF"/>
+            <Setter Property="VerticalGridLinesBrush" Value="#0FFFFFFF"/>
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Foreground" Value="{StaticResource AccentTeal}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
     </Window.Resources>
 
-    <Grid Margin="16">
+    <!-- Fondo del Window: ya está aplicado en Window.Background -->
+    <Grid Background="Transparent" Margin="0">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <!-- Header -->
             <RowDefinition Height="Auto"/>
-            <!-- Filtros -->
             <RowDefinition Height="*"/>
-            <!-- Grilla -->
             <RowDefinition Height="Auto"/>
-            <!-- Acciones -->
         </Grid.RowDefinitions>
 
         <!-- Encabezado -->
-        <DockPanel Grid.Row="0" Margin="0,0,0,12">
-            <StackPanel Orientation="Horizontal">
-                <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE719;" FontSize="20"
-                           Foreground="{DynamicResource PrimaryHueMidBrush}" Margin="0,0,6,0"/>
-                <TextBlock Text="Productos" FontSize="20" FontWeight="Bold"
-                           Foreground="{DynamicResource MaterialDesignBody}"/>
-            </StackPanel>
-        </DockPanel>
+        <StackPanel Grid.Row="0" Margin="8,8,8,12">
+            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE719;" FontSize="20"
+                       Foreground="{StaticResource AccentTeal}" Margin="0,0,6,0"/>
+            <TextBlock Text="Productos" FontSize="26" FontWeight="Bold"
+                       Foreground="{StaticResource HeaderText}"/>
+        </StackPanel>
 
-        <!-- Filtros -->
-        <materialDesign:Card Grid.Row="1"
-                             Padding="12" Margin="0,0,0,12"
-                             Background="{DynamicResource MaterialDesignCardBackground}"
-                             materialDesign:ShadowAssist.ShadowDepth="Depth1">
+        <!-- Filtros (tarjeta oscura) -->
+        <Border Grid.Row="1" CornerRadius="12" Background="{StaticResource CardBgLight}" Padding="14" Margin="10,0,10,12">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
                 <TextBox x:Name="txtBuscar"
                          Grid.Column="0"
-                         Height="36"
-                         Padding="10,0"
+                         Height="44"
+                         Padding="12,0"
                          VerticalContentAlignment="Center"
+                         Background="#0FFFFFFF"
+                         Foreground="White"
+                         BorderThickness="0"
                          materialDesign:HintAssist.Hint="Buscar producto o código"
                          TextChanged="txtBuscar_TextChanged"/>
 
                 <Button Grid.Column="1"
-                        Padding="14,6"
-                        Margin="8,0,0,0"
-                        Background="{StaticResource BrushBtnAccent}"
-                        Foreground="White"
+                        Style="{StaticResource AccentButton}"
+                        Padding="14,8"
+                        Margin="12,0,0,0"
                         Click="BtnBuscar_Click">
-                    <Button.Style>
-                        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}"/>
-                    </Button.Style>
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE721;" Margin="0,0,6,0"/>
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE721;" Margin="0,0,8,0"/>
                         <TextBlock Text="Buscar"/>
                     </StackPanel>
                 </Button>
             </Grid>
-        </materialDesign:Card>
+        </Border>
 
-        <!-- Grilla de productos -->
-        <materialDesign:Card Grid.Row="2"
-                             Padding="12" Margin="0,0,0,12"
-                             Background="{DynamicResource MaterialDesignCardBackground}"
-                             materialDesign:ShadowAssist.ShadowDepth="Depth2">
-            <DataGrid x:Name="dgProductos"
-                      AutoGenerateColumns="False"
-                      IsReadOnly="True"
-                      SelectionMode="Single"
-                      SelectionChanged="dgProductos_SelectionChanged"
-                      Background="Transparent"
-                      BorderThickness="0"
-                      HeadersVisibility="Column"
-                      AlternationCount="2"
-                      AlternatingRowBackground="#0FFFFFFF"
-                      materialDesign:DataGridAssist.CellPadding="10,6,10,6"
-                      materialDesign:DataGridAssist.ColumnHeaderPadding="10,8,10,8">
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="Código" Binding="{Binding CodigoBarras}" Width="160"/>
-                    <DataGridTextColumn Header="Nombre" Binding="{Binding Nombre}" Width="*" />
-                    <DataGridTextColumn Header="Categoría" Binding="{Binding CategoriaNombre}" Width="180"/>
-                    <DataGridTextColumn Header="Proveedor" Binding="{Binding ProveedorNombre}" Width="200"/>
-                    <DataGridTextColumn Header="Compra (S/)" Binding="{Binding PrecioCompra, StringFormat={}{0:N2}}" Width="130"/>
-                    <DataGridTextColumn Header="Venta (S/)" Binding="{Binding PrecioVenta, StringFormat={}{0:N2}}" Width="130"/>
-                    <DataGridTextColumn Header="Stock" Binding="{Binding Stock}" Width="100"/>
-                </DataGrid.Columns>
-            </DataGrid>
-        </materialDesign:Card>
+        <!-- Grilla de productos en tarjeta más grande -->
+        <Border Grid.Row="2" CornerRadius="12" Background="{StaticResource CardBg}" Padding="12" Margin="10,0,10,12" >
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
 
-        <!-- Acciones -->
-        <DockPanel Grid.Row="3">
-            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
-                <Button Padding="14,6"
-                        Margin="0,0,8,0"
-                        Background="{StaticResource BrushBtnPrimary}"
-                        Foreground="White"
-                        Click="BtnAgregar_Click">
-                    <Button.Style>
-                        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}"/>
-                    </Button.Style>
+                <!-- Título dentro de la tarjeta -->
+                <TextBlock Text="Productos" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource HeaderText}" Margin="6,0,0,12"/>
+
+                <DataGrid x:Name="dgProductos"
+                          Grid.Row="1"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True"
+                          SelectionMode="Single"
+                          SelectionChanged="dgProductos_SelectionChanged"
+                          Style="{StaticResource NiceDataGrid}"
+                          HeadersVisibility="Column"
+                          AlternationCount="2"
+                          CanUserResizeRows="False"
+                          Background="Transparent"
+                          BorderThickness="0"
+                          materialDesign:DataGridAssist.CellPadding="10,8,10,8"
+                          materialDesign:DataGridAssist.ColumnHeaderPadding="10,8,10,8">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Código" Binding="{Binding CodigoBarras}" Width="160"/>
+                        <DataGridTextColumn Header="Nombre" Binding="{Binding Nombre}" Width="*"/>
+                        <DataGridTextColumn Header="Categoría" Binding="{Binding CategoriaNombre}" Width="180"/>
+                        <DataGridTextColumn Header="Proveedor" Binding="{Binding ProveedorNombre}" Width="200"/>
+                        <DataGridTextColumn Header="Compra (S/)" Binding="{Binding PrecioCompra, StringFormat={}{0:N2}}" Width="130"/>
+                        <DataGridTextColumn Header="Venta (S/)" Binding="{Binding PrecioVenta, StringFormat={}{0:N2}}" Width="130"/>
+                        <DataGridTextColumn Header="Stock" Binding="{Binding Stock}" Width="100"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </Border>
+
+        <!-- Acciones (botones) y paginación -->
+        <Grid Grid.Row="3" Margin="10,6,10,26">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Paginación a la izquierda -->
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Grid.Column="0">
+                <Button x:Name="btnPrevPage" Style="{StaticResource PageNavButton}" Click="BtnPrevPage_Click" ToolTip="Página anterior">‹</Button>
+                <TextBlock x:Name="txtPageInfo" VerticalAlignment="Center" Foreground="White" Margin="10,0,10,0" FontWeight="SemiBold"/>
+                <Button x:Name="btnNextPage" Style="{StaticResource PageNavButton}" Click="BtnNextPage_Click" ToolTip="Página siguiente">›</Button>
+            </StackPanel>
+
+            <!-- Botones acción a la derecha -->
+            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <Button Style="{StaticResource PrimaryButton}" Click="BtnAgregar_Click" Height="52" Width="120">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE710;" Margin="0,0,6,0"/>
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE710;" Margin="0,0,10,0"/>
                         <TextBlock Text="Agregar"/>
                     </StackPanel>
                 </Button>
 
-                <Button Padding="14,6"
-                        Margin="0,0,8,0"
-                        Background="{StaticResource BrushBtnAccent}"
-                        Foreground="White"
-                        Click="BtnActualizar_Click">
-                    <Button.Style>
-                        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
-                            <Setter Property="IsEnabled" Value="True"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding SelectedItem, ElementName=dgProductos}" Value="{x:Null}">
-                                    <Setter Property="IsEnabled" Value="False"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
+                <Button x:Name="btnActualizar" Style="{StaticResource AccentButton}" Click="BtnActualizar_Click" Height="52" MinWidth="120" IsEnabled="False">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8A7;" Margin="0,0,6,0"/>
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8A7;" Margin="0,0,10,0"/>
                         <TextBlock Text="Actualizar"/>
                     </StackPanel>
                 </Button>
 
-                <Button Padding="14,6"
-                        Margin="0,0,8,0"
-                        Background="{StaticResource BrushBtnDanger}"
-                        Foreground="White"
-                        Click="BtnEliminar_Click">
-                    <Button.Style>
-                        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
-                            <Setter Property="IsEnabled" Value="True"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding SelectedItem, ElementName=dgProductos}" Value="{x:Null}">
-                                    <Setter Property="IsEnabled" Value="False"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
+                <Button x:Name="btnEliminar" Style="{StaticResource DangerButton}" Click="BtnEliminar_Click" Height="52" MinWidth="120" IsEnabled="False">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE74D;" Margin="0,0,6,0"/>
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE74D;" Margin="0,0,10,0"/>
                         <TextBlock Text="Eliminar"/>
                     </StackPanel>
                 </Button>
 
-                <Button Padding="14,6"
-                        Background="{StaticResource BrushBtnNeutral}"
-                        Foreground="White"
-                        Click="BtnLimpiar_Click">
-                    <Button.Style>
-                        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}"/>
-                    </Button.Style>
+                <Button x:Name="btnLimpiar" Style="{StaticResource NeutralButton}" Click="BtnLimpiar_Click" Height="52" MinWidth="140" IsEnabled="False">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE894;" Margin="0,0,6,0"/>
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE894;" Margin="0,0,10,0"/>
                         <TextBlock Text="Limpiar selección"/>
                     </StackPanel>
                 </Button>
             </StackPanel>
-        </DockPanel>
+        </Grid>
     </Grid>
 </Window>

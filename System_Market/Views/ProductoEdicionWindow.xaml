@@ -1,236 +1,330 @@
 ﻿<Window x:Class="System_Market.Views.ProductoEdicionWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:materialDesign="http://materialdesigninxaml.net/wpf/xaml/themes"
         xmlns:sys="clr-namespace:System;assembly=System.Runtime"
         Title="Producto"
-        Height="516" Width="418"
-        MinHeight="420" MinWidth="600"
+        Height="546" Width="612"
+        MinHeight="550" MinWidth="600"
         WindowStartupLocation="CenterOwner"
-        Background="{DynamicResource MaterialDesignPaper}"
+        Background="{DynamicResource MainBg}"
         FontFamily="Segoe UI"
         UseLayoutRounding="True"
         SnapsToDevicePixels="True">
 
     <Window.Resources>
-        <!-- Tamaños unificados -->
-        <sys:Double x:Key="CtlHeight">36</sys:Double>
-        <sys:Double x:Key="CtlFontSize">13</sys:Double>
-        <Thickness x:Key="CtlPadding">14,6</Thickness>
+        <LinearGradientBrush x:Key="MainBg" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#0F225E" Offset="0"/>
+            <GradientStop Color="#0E0F73" Offset="0.3"/>
+            <GradientStop Color="#1A5AAE" Offset="1"/>
+        </LinearGradientBrush>
 
-        <!-- Paleta de botones -->
-        <SolidColorBrush x:Key="BrushBtnPrimary" Color="#3F51B5"/>
-        <SolidColorBrush x:Key="BrushBtnNeutral" Color="#607D8B"/>
+        <sys:Double x:Key="CtlHeight">44</sys:Double>
+        <sys:Double x:Key="CtlFontSize">14</sys:Double>
+        <Thickness x:Key="CtlPadding">16,8</Thickness>
+
+        <LinearGradientBrush x:Key="BtnPrimaryBg" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#2766FF" Offset="0"/>
+            <GradientStop Color="#0F3CF0" Offset="1"/>
+        </LinearGradientBrush>
+        <LinearGradientBrush x:Key="BtnCancelBg" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#1EC8FF" Offset="0"/>
+            <GradientStop Color="#0B8DE6" Offset="1"/>
+        </LinearGradientBrush>
+
+        <Style x:Key="PillBorder" TargetType="Border">
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Background" Value="#1AFFFFFF"/>
+            <Setter Property="Padding" Value="6"/>
+        </Style>
+
+        <Style x:Key="FlatTextBox" TargetType="TextBox">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="{StaticResource CtlFontSize}"/>
+            <Setter Property="Padding" Value="6,0"/>
+        </Style>
+
+        <!-- ComboBox mejorado (sin cambios) -->
+        <Style x:Key="NiceComboBox" TargetType="ComboBox">
+            <!-- ...igual que antes... -->
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="6,0"/>
+            <Setter Property="FontSize" Value="{StaticResource CtlFontSize}"/>
+            <Setter Property="MinHeight" Value="{StaticResource CtlHeight}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <Border x:Name="Bd"
+                                    Background="Transparent"
+                                    CornerRadius="6"
+                                    SnapsToDevicePixels="True">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition />
+                                        <ColumnDefinition Width="36"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock Margin="6,0,6,0"
+                                               VerticalAlignment="Center"
+                                               HorizontalAlignment="Left"
+                                               Text="{Binding SelectedItem.Nombre, RelativeSource={RelativeSource TemplatedParent}, TargetNullValue=''}"
+                                               Foreground="White"
+                                               TextTrimming="CharacterEllipsis"/>
+
+                                    <ToggleButton Grid.Column="1"
+                                                  x:Name="ToggleButton"
+                                                  Focusable="False"
+                                                  IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                                  Background="Transparent"
+                                                  BorderThickness="0"
+                                                  Style="{x:Null}"
+                                                  HorizontalContentAlignment="Center"
+                                                  VerticalContentAlignment="Center">
+                                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="" FontSize="14" Foreground="#CCFFFFFF"/>
+                                    </ToggleButton>
+                                </Grid>
+                            </Border>
+
+                            <Popup x:Name="PART_Popup"
+                                   Placement="Bottom"
+                                   AllowsTransparency="True"
+                                   Focusable="False"
+                                   IsOpen="{TemplateBinding IsDropDownOpen}"
+                                   PopupAnimation="Fade"
+                                   StaysOpen="False">
+                                <Border CornerRadius="6" Background="#0F1F3A" BorderBrush="#22000000" BorderThickness="1"
+                                        SnapsToDevicePixels="True" Padding="4" MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
+                                    <Border.Effect>
+                                        <DropShadowEffect BlurRadius="10" ShadowDepth="4" Color="#44000000"/>
+                                    </Border.Effect>
+
+                                    <ScrollViewer CanContentScroll="True" VerticalScrollBarVisibility="Auto" MaxHeight="220">
+                                        <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="HasItems" Value="False">
+                                <Setter TargetName="PART_Popup" Property="Visibility" Value="Collapsed"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Foreground" Value="#88FFFFFF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <!-- ItemContainerStyle idem -->
+        </Style>
+
+        <Style x:Key="HeaderTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="22"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#CFE9FF"/>
+            <Setter Property="TextWrapping" Value="NoWrap"/>
+            <Setter Property="Margin" Value="2,0,0,6"/>
+        </Style>
+
+        <!-- Botón primario con efecto -->
+        <Style x:Key="PrimaryActionButton" TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="{StaticResource BtnPrimaryBg}"/>
+            <Setter Property="Padding" Value="{StaticResource CtlPadding}"/>
+            <Setter Property="MinHeight" Value="48"/>
+            <Setter Property="MinWidth" Value="140"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+            <Setter Property="RenderTransform">
+                <Setter.Value>
+                    <ScaleTransform ScaleX="1" ScaleY="1"/>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Effect" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="10" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="RenderTransform">
+                        <Setter.Value>
+                            <ScaleTransform ScaleX="1.04" ScaleY="1.04"/>
+                        </Setter.Value>
+                    </Setter>
+                    <Setter Property="Effect">
+                        <Setter.Value>
+                            <DropShadowEffect BlurRadius="14" ShadowDepth="6" Color="#40000000"/>
+                        </Setter.Value>
+                    </Setter>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="RenderTransform">
+                        <Setter.Value>
+                            <ScaleTransform ScaleX="0.98" ScaleY="0.98"/>
+                        </Setter.Value>
+                    </Setter>
+                    <Setter Property="Effect">
+                        <Setter.Value>
+                            <DropShadowEffect BlurRadius="8" ShadowDepth="2" Color="#22000000"/>
+                        </Setter.Value>
+                    </Setter>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="CancelActionButton" TargetType="Button" BasedOn="{StaticResource PrimaryActionButton}">
+            <Setter Property="Background" Value="{StaticResource BtnCancelBg}"/>
+            <Setter Property="MinWidth" Value="160"/>
+        </Style>
     </Window.Resources>
 
-    <Grid Margin="16">
+    <Grid Margin="12" Background="Transparent">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <!-- Header -->
             <RowDefinition Height="*"/>
-            <!-- Form -->
             <RowDefinition Height="Auto"/>
-            <!-- Actions -->
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <!-- Encabezado -->
-        <DockPanel Grid.Row="0" Margin="0,0,0,12">
-            <StackPanel Orientation="Horizontal">
-                <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE719;" FontSize="18"
-                           Foreground="{DynamicResource PrimaryHueMidBrush}" Margin="0,0,6,0"/>
-                <TextBlock Text="Datos del producto" FontSize="18" FontWeight="SemiBold"
-                           Foreground="{DynamicResource MaterialDesignBody}"/>
-            </StackPanel>
-        </DockPanel>
+        <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Margin="10,8,10,16">
+            <TextBlock Style="{StaticResource HeaderTitle}" Text="DATOS DEL PRODUCTO" />
+        </StackPanel>
 
-        <!-- Formulario -->
-        <materialDesign:Card Grid.Row="1"
-                             Padding="16"
-                             Background="{DynamicResource MaterialDesignCardBackground}"
-                             materialDesign:ShadowAssist.ShadowDepth="Depth2" Grid.ColumnSpan="2" Margin="0,0,10,0">
-            <Grid Grid.IsSharedSizeScope="True">
+        <Border Grid.Row="1" Grid.ColumnSpan="2" CornerRadius="12" Background="#0D000000" Padding="18" Margin="10,0,10,16">
+            <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" SharedSizeGroup="col"/>
-                    <ColumnDefinition Width="*" SharedSizeGroup="col"/>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
-                    <!-- fila 0 -->
                     <RowDefinition Height="12"/>
                     <RowDefinition Height="Auto"/>
-                    <!-- fila 2 -->
                     <RowDefinition Height="12"/>
                     <RowDefinition Height="Auto"/>
-                    <!-- fila 4 -->
                     <RowDefinition Height="12"/>
                     <RowDefinition Height="Auto"/>
-                    <!-- fila 6 -->
                 </Grid.RowDefinitions>
 
-                <!-- Código de barras -->
-                <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,8,0">
-                    <TextBlock Text="Código de barras" FontSize="12" Margin="2,0,0,4"
-                               Foreground="{DynamicResource MaterialDesignBody}"/>
-                    <TextBox x:Name="txtCodigoBarras"
-                             Height="{StaticResource CtlHeight}"
-                             FontSize="{StaticResource CtlFontSize}"
-                             Padding="10,0"
-                             ToolTip="Escanea o escribe el código de barras"
-                             materialDesign:HintAssist.Hint="Escanear o escribir código"/>
-                    <TextBlock x:Name="txtEstadoCodigo"
-                               FontSize="11"
-                               Margin="2,0,0,8"
-                               Foreground="#FFAAAAAA"
-                               Text="Ingrese / escanee un código"/>
+                <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,12,0">
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="CÓDIGO DE BARRAS"/>
+                    <Border Style="{StaticResource PillBorder}">
+                        <TextBox x:Name="txtCodigoBarras" Style="{StaticResource FlatTextBox}"
+                                 ToolTip="Escanea o escribe el código"/>
+                    </Border>
+                    <TextBlock x:Name="txtEstadoCodigo" FontSize="11" Foreground="#88FFFFFF" Margin="4,6,0,0" Text="Escanear o escribe codigo"/>
                 </StackPanel>
 
-                <!-- Nombre -->
-                <StackPanel Grid.Row="0" Grid.Column="1" Margin="8,0,0,0">
-                    <TextBlock Text="Nombre del producto" FontSize="12" Margin="2,0,0,4"
-                               Foreground="{DynamicResource MaterialDesignBody}"/>
-                    <TextBox x:Name="txtNombre"
-                             Height="{StaticResource CtlHeight}"
-                             FontSize="{StaticResource CtlFontSize}"
-                             Padding="10,0"
-                             ToolTip="Nombre comercial del producto"
-                             materialDesign:HintAssist.Hint="Nombre"/>
+                <StackPanel Grid.Row="0" Grid.Column="1" Margin="12,0,0,0">
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="NOMBRE DEL PRODUCTO"/>
+                    <Border Style="{StaticResource PillBorder}">
+                        <TextBox x:Name="txtNombre" Style="{StaticResource FlatTextBox}"
+                                 ToolTip="Nombre comercial del producto"/>
+                    </Border>
                 </StackPanel>
 
-                <!-- Categoría -->
-                <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,8,0">
-                    <TextBlock Text="Categoría" FontSize="12" Margin="2,0,0,4"
-                               Foreground="{DynamicResource MaterialDesignBody}"/>
-                    <ComboBox x:Name="cbCategoria"
-                              Height="{StaticResource CtlHeight}"
-                              FontSize="{StaticResource CtlFontSize}"
-                              Padding="8,0"
-                              DisplayMemberPath="Nombre"
-                              SelectedValuePath="Id"
-                              ToolTip="Selecciona una categoría"
-                              materialDesign:HintAssist.Hint="Selecciona una categoría"/>
+                <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,12,0">
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="CATEGORÍA"/>
+                    <Border Style="{StaticResource PillBorder}">
+                        <ComboBox x:Name="cbCategoria" Style="{StaticResource NiceComboBox}"
+                                  DisplayMemberPath="Nombre" SelectedValuePath="Id"
+                                  ToolTip="Selecciona una categoría"/>
+                    </Border>
                 </StackPanel>
 
-                <!-- Proveedor -->
-                <StackPanel Grid.Row="2" Grid.Column="1" Margin="8,0,0,0">
-                    <TextBlock Text="Proveedor" FontSize="12" Margin="2,0,0,4"
-                               Foreground="{DynamicResource MaterialDesignBody}"/>
-                    <ComboBox x:Name="cbProveedor"
-                              Height="{StaticResource CtlHeight}"
-                              FontSize="{StaticResource CtlFontSize}"
-                              Padding="8,0"
-                              DisplayMemberPath="Nombre"
-                              SelectedValuePath="Id"
-                              ToolTip="Selecciona un proveedor"
-                              materialDesign:HintAssist.Hint="Selecciona un proveedor"/>
+                <StackPanel Grid.Row="2" Grid.Column="1" Margin="12,0,0,0">
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="PROVEEDOR"/>
+                    <Border Style="{StaticResource PillBorder}">
+                        <ComboBox x:Name="cbProveedor" Style="{StaticResource NiceComboBox}"
+                                  DisplayMemberPath="Nombre" SelectedValuePath="Id"
+                                  ToolTip="Selecciona un proveedor"/>
+                    </Border>
                 </StackPanel>
 
-                <!-- Precio compra con prefijo S/ -->
-                <StackPanel Grid.Row="4" Grid.Column="0" Margin="0,0,8,0">
-                    <TextBlock Text="Precio de compra (S/)" FontSize="12" Margin="2,0,0,4"
-                               Foreground="{DynamicResource MaterialDesignBody}"/>
+                <StackPanel Grid.Row="4" Grid.Column="0" Margin="0,0,12,0">
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="PRECIO DE COMPRA"/>
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="44"/>
+                            <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <Border Grid.Column="0" Padding="10,0"
-                                Background="#11000000" BorderBrush="#22000000" BorderThickness="1"
-                                CornerRadius="4,0,0,4">
-                            <TextBlock Text="S/" VerticalAlignment="Center"/>
+                        <Border Grid.Column="0" CornerRadius="8" Background="#0F000000" HorizontalAlignment="Left" Margin="0,0,6,0">
+                            <TextBlock Text="S/" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Center" Padding="10,6"/>
                         </Border>
-                        <Border Grid.Column="1"
-                                Background="#11000000" BorderBrush="#22000000" BorderThickness="1"
-                                CornerRadius="0,4,4,0">
-                            <TextBox x:Name="txtPrecioCompra"
-                                     Height="{StaticResource CtlHeight}"
-                                     FontSize="{StaticResource CtlFontSize}"
-                                     Padding="10,0"
+                        <Border Grid.Column="1" Style="{StaticResource PillBorder}">
+                            <TextBox x:Name="txtPrecioCompra" Style="{StaticResource FlatTextBox}"
                                      TextAlignment="Right"
-                                     ToolTip="Ejemplo: 12.50"
-                                     materialDesign:HintAssist.Hint="0.00"/>
+                                     ToolTip="Solo números y punto/coma (ej. 12.50)"/>
                         </Border>
                     </Grid>
                 </StackPanel>
 
-                <!-- Precio venta con prefijo S/ -->
-                <StackPanel Grid.Row="4" Grid.Column="1" Margin="8,0,0,0">
-                    <TextBlock Text="Precio de venta (S/)" FontSize="12" Margin="2,0,0,4"
-                               Foreground="{DynamicResource MaterialDesignBody}"/>
+                <StackPanel Grid.Row="4" Grid.Column="1" Margin="12,0,0,0">
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="PRECIO DE VENTA (S)"/>
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="44"/>
+                            <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <Border Grid.Column="0" Padding="10,0"
-                                Background="#11000000" BorderBrush="#22000000" BorderThickness="1"
-                                CornerRadius="4,0,0,4">
-                            <TextBlock Text="S/" VerticalAlignment="Center"/>
+                        <Border Grid.Column="0" CornerRadius="8" Background="#0F000000" HorizontalAlignment="Left" Margin="0,0,6,0">
+                            <TextBlock Text="S/" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Center" Padding="10,6"/>
                         </Border>
-                        <Border Grid.Column="1"
-                                Background="#11000000" BorderBrush="#22000000" BorderThickness="1"
-                                CornerRadius="0,4,4,0">
-                            <TextBox x:Name="txtPrecioVenta"
-                                     Height="{StaticResource CtlHeight}"
-                                     FontSize="{StaticResource CtlFontSize}"
-                                     Padding="10,0"
+                        <Border Grid.Column="1" Style="{StaticResource PillBorder}">
+                            <TextBox x:Name="txtPrecioVenta" Style="{StaticResource FlatTextBox}"
                                      TextAlignment="Right"
-                                     ToolTip="Ejemplo: 15.90"
-                                     materialDesign:HintAssist.Hint="0.00"/>
+                                     ToolTip="Solo números y punto/coma (ej. 15.90)"/>
                         </Border>
                     </Grid>
                 </StackPanel>
 
-                <!-- Stock -->
-                <StackPanel Grid.Row="6" Grid.ColumnSpan="2">
-                    <TextBlock Text="Cantidad en stock" FontSize="12" Margin="2,0,0,4"
-                               Foreground="{DynamicResource MaterialDesignBody}"/>
-                    <TextBox x:Name="txtStock"
-                             Width="200"
-                             Height="{StaticResource CtlHeight}"
-                             FontSize="{StaticResource CtlFontSize}"
-                             Padding="10,0"
-                             TextAlignment="Right"
-                             ToolTip="Unidades en inventario"
-                             materialDesign:HintAssist.Hint="0"/>
+                <StackPanel Grid.Row="6" Grid.ColumnSpan="2" Margin="0,10,0,0">
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="CANTIDAD EN-STOCK"/>
+                    <Border Style="{StaticResource PillBorder}" Width="220">
+                        <TextBox x:Name="txtStock" Style="{StaticResource FlatTextBox}"
+                                 TextAlignment="Right"
+                                 ToolTip="Solo dígitos (ej. 10)"/>
+                    </Border>
                 </StackPanel>
             </Grid>
-        </materialDesign:Card>
+        </Border>
 
-        <!-- Acciones -->
-        <DockPanel Grid.Row="2" Margin="0,12,0,0">
-            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" HorizontalAlignment="Right">
-                <Button Content="Cancelar"
-                        Padding="{StaticResource CtlPadding}"
-                        MinHeight="{StaticResource CtlHeight}"
-                        Margin="0,0,8,0"
-                        Background="{StaticResource BrushBtnNeutral}"
-                        Foreground="White"
-                        IsCancel="True"
-                        Click="BtnCancelar_Click">
-                    <Button.Style>
-                        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}"/>
-                    </Button.Style>
-                </Button>
-
-                <Button Padding="{StaticResource CtlPadding}"
-                        MinHeight="{StaticResource CtlHeight}"
-                        Background="{StaticResource BrushBtnPrimary}"
-                        Foreground="White"
-                        IsDefault="True"
-                        Click="BtnGuardar_Click">
-                    <Button.Style>
-                        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}"/>
-                    </Button.Style>
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE74E;" Margin="0,0,6,0"/>
-                        <TextBlock Text="Guardar"/>
-                    </StackPanel>
-                </Button>
-            </StackPanel>
-        </DockPanel>
+        <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="10,0,10,12">
+            <Button x:Name="BtnCancelar" Content="←  Cancelar"
+                    Style="{StaticResource CancelActionButton}"
+                    Margin="0,0,12,0"
+                    IsCancel="True"
+                    Click="BtnCancelar_Click"/>
+            <Button x:Name="BtnGuardar" Padding="{StaticResource CtlPadding}" MinHeight="48" MinWidth="160"
+                    Style="{StaticResource PrimaryActionButton}"
+                    IsDefault="True"
+                    Click="BtnGuardar_Click">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE74E;" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="Guardar" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+        </StackPanel>
     </Grid>
 </Window>

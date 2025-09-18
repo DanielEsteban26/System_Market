@@ -1,0 +1,117 @@
+<Window x:Class="System_Market.Views.AcercaWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Acerca de"
+        Width="760" Height="588"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="{DynamicResource MainBgLocal}"
+        FontFamily="Segoe UI"
+        Loaded="Window_Loaded">
+    <Window.Resources>
+        <LinearGradientBrush x:Key="MainBgLocal" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#0F3F68" Offset="0"/>
+            <GradientStop Color="#15B6C9" Offset="1"/>
+        </LinearGradientBrush>
+
+        <SolidColorBrush x:Key="CardBg" Color="#1E2A33"/>
+        <SolidColorBrush x:Key="AccentTeal" Color="#19C1D3"/>
+        <SolidColorBrush x:Key="HeaderText" Color="#E8F6F9"/>
+
+        <Style x:Key="PrimaryButton" TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource AccentTeal}"/>
+            <Setter Property="Foreground" Value="{StaticResource HeaderText}"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="Margin" Value="0"/>
+            <Setter Property="MinWidth" Value="140"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="LinkText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource AccentTeal}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <!-- Bordes visibles + más espacio inferior para que el botón no quede "comido" -->
+        <Border Width="720"
+                Padding="26,26,26,44"
+                CornerRadius="12"
+                Background="{StaticResource CardBg}"
+                BorderBrush="#2E4146"
+                BorderThickness="1"
+                SnapsToDevicePixels="True"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center" Height="542">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Width="640" >
+                <!-- Logo -->
+                <Border Width="96" Height="96" CornerRadius="48" Background="{StaticResource AccentTeal}" HorizontalAlignment="Center" Margin="0,0,0,12">
+                    <Viewbox>
+                        <TextBlock Text="SM" FontWeight="Bold" Foreground="{StaticResource CardBg}" FontFamily="Segoe UI" />
+                    </Viewbox>
+                </Border>
+
+                <!-- Title & version -->
+                <TextBlock Text="Sistema Minimarket" FontSize="22" FontWeight="Bold" Foreground="{StaticResource HeaderText}" HorizontalAlignment="Center"/>
+                <TextBlock x:Name="txtVersion" Text="Versión 1.0.0.0" FontSize="12" Foreground="#BFD7DB" HorizontalAlignment="Center" Margin="0,6,0,10"/>
+
+                <Separator Margin="40,6" Opacity="0.14"/>
+
+                <!-- Description -->
+                <TextBlock Text="Aplicación para la gestión de ventas, compras y stock en minimarkets."
+                           TextAlignment="Center" Foreground="#C5D5DB" FontSize="13" TextWrapping="Wrap" Margin="6,8,6,14"/>
+
+                <!-- Developer -->
+                <TextBlock Text="Desarrollado por:" Foreground="#BFD7DB" HorizontalAlignment="Center" />
+                <TextBlock Text="Daniel Isidro" FontWeight="SemiBold" Foreground="{StaticResource HeaderText}" HorizontalAlignment="Center" Margin="0,6,0,6"/>
+
+                <!-- Contact row -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,6,0,0">
+                    <TextBlock Text="✉" Foreground="{StaticResource AccentTeal}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock Foreground="#AFCBD2" VerticalAlignment="Center">
+                        <Hyperlink NavigateUri="mailto:isidroesteban402@gmail.com" RequestNavigate="Mail_RequestNavigate">isidroesteban402@gmail.com</Hyperlink>
+                    </TextBlock>
+                </StackPanel>
+
+                <!-- Social / repo -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,12,0,6">
+                    <Button Click="BtnGithub_Click" Background="Transparent" BorderThickness="0" Cursor="Hand" Padding="6" ToolTip="GitHub" Margin="0,0,18,0">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="🐙" FontSize="16" Margin="0,0,8,0"/>
+                            <TextBlock Text="GitHub" Foreground="{StaticResource HeaderText}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button Click="BtnLinkedIn_Click" Background="Transparent" BorderThickness="0" Cursor="Hand" Padding="6" ToolTip="LinkedIn">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="🔗" FontSize="16" Margin="0,0,8,0"/>
+                            <TextBlock Text="LinkedIn" Foreground="{StaticResource HeaderText}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+
+                <TextBlock Text="Repositorio: System_Market (GitHub)" Foreground="#AFCBD2" HorizontalAlignment="Center" Margin="0,6,0,10"/>
+
+                <Separator Margin="30,6" Opacity="0.12"/>
+
+                <!-- Footer -->
+                <TextBlock Text="© 2025 Daniel Isidro. Todos los derechos reservados." Foreground="#98AEB5" FontSize="11" HorizontalAlignment="Center" Margin="0,8,0,12"/>
+                <!-- Botón con más altura y margin inferior para que no quede tocando la esquina -->
+                <Button x:Name="btnCerrar" Style="{StaticResource PrimaryButton}" Click="BtnCerrar_Click" Margin="0,6,0,8" Padding="16,8">Cerrar</Button>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>
