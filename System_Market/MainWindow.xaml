@@ -134,6 +134,10 @@
                                     </BeginStoryboard>
                                 </Trigger.ExitActions>
                             </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.9"/>
+                                <Setter TargetName="Bd" Property="Background" Value="#FFB0B0B0"/>
+                            </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
@@ -312,7 +316,8 @@
     <Grid Background="{StaticResource MainBg}">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="260"/>
-            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="407*"/>
+            <ColumnDefinition Width="63*"/>
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="80"/>
@@ -335,7 +340,7 @@
         </Border>
 
         <!-- Top bar -->
-        <Grid Grid.Column="1" Grid.Row="0" Margin="8,12,24,0">
+        <Grid Grid.Column="1" Grid.Row="0" Margin="8,12,24,0" Grid.ColumnSpan="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
@@ -362,7 +367,7 @@
         </Grid>
 
         <!-- Contenido principal con padding para separación -->
-        <Border Grid.Column="1" Grid.Row="1" Padding="18" Margin="8,14,24,18" Background="Transparent">
+        <Border Grid.Column="1" Grid.Row="1" Padding="18" Margin="8,14,24,18" Background="Transparent" Grid.ColumnSpan="2">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel>
 

@@ -74,6 +74,9 @@ namespace System_Market.Views
             txtStock.PreviewKeyDown += Stock_PreviewKeyDown;
             DataObject.AddPastingHandler(txtStock, Stock_PasteHandler);
 
+            // Registrar handler específico para pegado en código de barras
+            DataObject.AddPastingHandler(txtCodigoBarras, CodigoBarras_PasteHandler);
+
             // --- Protección contra "residuos" del escáner: registrar para los TextBox principales ---
             // Nota: NO registramos PreviewKeyDown aquí para evitar conflicto entre KeyDown y TextInput.
             var protectedTbs = new[] { txtCodigoBarras, txtNombre, txtPrecioCompra, txtPrecioVenta, txtStock };
@@ -234,6 +237,31 @@ namespace System_Market.Views
             }
         }
 
+        // Reemplazar el uso de 'raw' por el texto pegado real en el handler CodigoBarras_PasteHandler
+        private void CodigoBarras_PasteHandler(object sender, DataObjectPastingEventArgs e)
+        {
+            Debug.WriteLine("[PasteHandler] Pegando en txtCodigoBarras");
+            // Obtener el texto pegado
+            if (!e.SourceDataObject.GetDataPresent(DataFormats.UnicodeText))
+            {
+                e.CancelCommand();
+                return;
+            }
+            var raw = (string)e.SourceDataObject.GetData(DataFormats.UnicodeText)!;
+            // Normaliza igual que el resto del código
+            var normalized = NormalizarCodigo(raw);
+
+            // Cancelar el pegado por defecto (evita inserciones dobles)
+            e.CancelCommand();
+
+            // Aplicar el texto de forma atómica
+            if (txtCodigoBarras.Text != normalized)
+            {
+                txtCodigoBarras.Text = normalized;
+                txtCodigoBarras.CaretIndex = normalized.Length;
+            }
+        }
+
         // --- resto del código existente (sin cambios en validaciones / lógica) ---
         private void ConstruirIndiceProductos()
         {
@@ -290,22 +318,34 @@ namespace System_Market.Views
         // Método invocado por el BarcodeScannerService
         public void HandleScannedCode(string codigo)
         {
+            Debug.WriteLine($"[HandleScannedCode] codigo: '{codigo}'");
             codigo = NormalizarCodigo(codigo);
             if (string.IsNullOrEmpty(codigo)) return;
 
-            // Rellena SOLO txtCodigoBarras
             txtCodigoBarras.Text = codigo;
             txtCodigoBarras.CaretIndex = codigo.Length;
-            // Poner foco en el control de código para que quede claro al usuario:
             txtCodigoBarras.Focus();
+            // Bloquear el campo para evitar más entradas
+            BloquearCodigo();
         }
 
         private void TxtCodigoBarras_TextChanged(object sender, TextChangedEventArgs e)
         {
+            Debug.WriteLine($"[TextChanged] txtCodigoBarras.Text: '{txtCodigoBarras.Text}'");
+            // Normaliza el texto cada vez que cambia
+            var normalizado = NormalizarCodigo(txtCodigoBarras.Text);
+            if (txtCodigoBarras.Text != normalizado)
+            {
+                txtCodigoBarras.Text = normalizado;
+                txtCodigoBarras.CaretIndex = normalizado.Length;
+                // Evita bucle infinito: no llames a VerificarCodigoExistente aquí, ya se llamará en el siguiente cambio
+                return;
+            }
             VerificarCodigoExistente(txtCodigoBarras.Text);
+           
         }
 
-        // Actualiza un TextBlock de estado (txtEstadoCodigo) si exista
+        // Actualiza un TextBlock de estado (txtEstadoCodigo) si existencia
         private void ActualizarEstadoCodigo(string texto, Brush? color = null)
         {
             if (txtEstadoCodigo == null) return;
@@ -405,13 +445,16 @@ namespace System_Market.Views
         private void BloquearCodigo()
         {
             txtCodigoBarras.IsReadOnly = true;
-            txtCodigoBarras.Background = new SolidColorBrush(Color.FromRgb(235, 235, 235));
+            // Fondo semitransparente, puedes ajustar el valor alfa (primer parámetro)
+            txtCodigoBarras.Background = new SolidColorBrush(Color.FromArgb(100, 235, 235, 235));
             txtCodigoBarras.Cursor = Cursors.Arrow;
             txtCodigoBarras.ToolTip = "Código fijado por lectura (no editable).";
         }
 
         private void BtnGuardar_Click(object sender, RoutedEventArgs e)
         {
+            Debug.WriteLine($"[BtnGuardar_Click] txtCodigoBarras.Text: '{txtCodigoBarras.Text}'");
+
             var codigo = NormalizarCodigo(txtCodigoBarras.Text);
             if (string.IsNullOrEmpty(codigo))
             {

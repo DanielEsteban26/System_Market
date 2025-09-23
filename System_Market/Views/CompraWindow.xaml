@@ -151,10 +151,20 @@
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="MinHeight" Value="36"/>
             <Style.Triggers>
+                <!-- Selección con foco -->
                 <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="#9E9E9E"/>
-                    <Setter Property="Foreground" Value="{StaticResource CardBg}"/>
+                    <Setter Property="Background" Value="#232B3E"/>
+                    <Setter Property="Foreground" Value="{StaticResource HeaderText}"/>
                 </Trigger>
+                <!-- Selección sin foco -->
+                <MultiTrigger>
+                    <MultiTrigger.Conditions>
+                        <Condition Property="IsSelected" Value="True"/>
+                        <Condition Property="IsKeyboardFocusWithin" Value="False"/>
+                    </MultiTrigger.Conditions>
+                    <Setter Property="Background" Value="#232B3E"/>
+                    <Setter Property="Foreground" Value="{StaticResource HeaderText}"/>
+                </MultiTrigger>
             </Style.Triggers>
         </Style>
 
@@ -216,6 +226,26 @@
                 </TextBlock>
             </StackPanel>
         </DataTemplate>
+
+        <Style x:Key="CenteredCellStyle" TargetType="DataGridCell">
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="CenteredTextBlockStyle" TargetType="TextBlock">
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+            <Setter Property="Foreground" Value="{StaticResource HeaderText}"/>
+        </Style>
+
+        <Style x:Key="ProductoNombreTextBlockStyle" TargetType="TextBlock">
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="16,0,0,0"/>
+            <!-- Ajusta el 16 si quieres más/menos espacio -->
+            <Setter Property="Foreground" Value="{StaticResource HeaderText}"/>
+        </Style>
     </Window.Resources>
 
     <Grid Margin="16">
@@ -333,21 +363,7 @@
                         </Border>
                     </StackPanel>
 
-                    <!-- Nuevo producto -->
-                    <Button Grid.Column="1" x:Name="btnProductoNuevo"
-                            Margin="0,22,8,0"
-                            Padding="{StaticResource CtlPadding}"
-                            MinWidth="150"
-                            MinHeight="{StaticResource CtlHeight}"
-                            FontSize="{StaticResource CtlFontSize}"
-                            Style="{StaticResource AccentButton}"
-                            Foreground="White"
-                            Click="btnProductoNuevo_Click">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE710;" Margin="0,0,6,0"/>
-                            <TextBlock Text="Nuevo"/>
-                        </StackPanel>
-                    </Button>
+                    <!-- Botón "Nuevo" eliminado -->
 
                     <!-- Cantidad -->
                     <StackPanel Grid.Column="2" Margin="0,0,8,0" VerticalAlignment="Top">
@@ -441,16 +457,20 @@
                           Style="{StaticResource NiceDataGrid}"
                           ColumnHeaderStyle="{StaticResource {x:Type DataGridColumnHeader}}"
                           RowStyle="{StaticResource GridRowStyle}"
-                          RowHeight="44">
+                          RowHeight="44"
+                          CellStyle="{StaticResource CenteredCellStyle}">
                     <DataGrid.Resources>
                         <Style TargetType="DataGridCell" BasedOn="{StaticResource GridCellStyle}"/>
                     </DataGrid.Resources>
 
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Producto" Binding="{Binding ProductoNombre}" Width="*" ElementStyle="{StaticResource DataGridTextBlockWhite}"/>
-                        <DataGridTextColumn Header="Cant." Binding="{Binding Cantidad}" Width="90" ElementStyle="{StaticResource NumericCellStyle}"/>
-                        <DataGridTextColumn Header="Precio (S/)" Binding="{Binding PrecioUnitario, StringFormat={}{0:N2}}" Width="150" ElementStyle="{StaticResource NumericCellStyle}"/>
-                        <DataGridTextColumn Header="Subtotal (S/)" Binding="{Binding Subtotal, StringFormat={}{0:N2}}" Width="160" ElementStyle="{StaticResource NumericCellStyle}"/>
+                        <DataGridTextColumn Header="Producto"
+                                            Binding="{Binding ProductoNombre}"
+                                            Width="*"
+                                            ElementStyle="{StaticResource ProductoNombreTextBlockStyle}"/>
+                        <DataGridTextColumn Header="Cant." Binding="{Binding Cantidad}" Width="90" ElementStyle="{StaticResource CenteredTextBlockStyle}"/>
+                        <DataGridTextColumn Header="Precio (S/)" Binding="{Binding PrecioUnitario, StringFormat={}{0:N2}}" Width="150" ElementStyle="{StaticResource CenteredTextBlockStyle}"/>
+                        <DataGridTextColumn Header="Subtotal (S/)" Binding="{Binding Subtotal, StringFormat={}{0:N2}}" Width="160" ElementStyle="{StaticResource CenteredTextBlockStyle}"/>
                         <DataGridTemplateColumn Header="Acciones" Width="90" IsReadOnly="True">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>

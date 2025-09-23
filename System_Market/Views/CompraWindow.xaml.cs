@@ -108,7 +108,6 @@ namespace System_Market.Views
             if (prod != null)
             {
                 cmbProducto.SelectedValue = prod.Id;
-                // Mostrar con formato de soles
                 txtPrecioUnitario.Text = CurrencyService.FormatSoles(prod.PrecioCompra, "N2");
                 lblProductoNombre.Text = prod.Nombre;
 
@@ -119,11 +118,10 @@ namespace System_Market.Views
             }
             else
             {
-                MostrarToast($"El producto con código {codigo} no existe. Usa 'Nuevo' para crearlo.");
+                MostrarToast($"Código {codigo} no existe. Cree el producto.");
                 cmbProducto.SelectedIndex = -1;
                 lblProductoNombre.Text = "";
                 txtPrecioUnitario.Clear();
-                btnProductoNuevo.Focus();
             }
         }
 
@@ -537,32 +535,7 @@ namespace System_Market.Views
             }
         }
 
-        private void btnProductoNuevo_Click(object sender, RoutedEventArgs e)
-        {
-            var win = new ProductoEdicionWindow(
-                DatabaseInitializer.GetConnectionString(),
-                producto: null,
-                codigoPrefill: _ultimoCodigoEscaneado,
-                bloquearCodigo: false);
-
-            if (win.ShowDialog() == true)
-            {
-                _producto_service_agregar_safe(win.Producto);
-                // Recargar productos
-                _productos = _producto_service.ObtenerTodos();
-                _vistaProductos = System.Windows.Data.CollectionViewSource.GetDefaultView(_productos);
-                _vistaProductos.Filter = null;
-                cmbProducto.ItemsSource = _vistaProductos;
-                cmbProducto.SelectedValuePath = "Id";
-
-                // Forzar selección por Id
-                SeleccionarProductoPorId(win.Producto.Id);
-
-                txtCantidad.Text = "1";
-                txtCantidad.SelectAll();
-                txtCantidad.Focus();
-            }
-        }
+        // btnProductoNuevo_Click eliminado
 
         private void BtnEditarPrecioUnitario_Click(object sender, RoutedEventArgs e)
         {
@@ -696,11 +669,10 @@ namespace System_Market.Views
             var prodFromService = _producto_service.ObtenerPorCodigoBarras(codigo);
             if (prodFromService == null)
             {
-                MostrarToast($"El producto con código {codigo} no existe. Usa 'Nuevo' para crearlo.");
+                MostrarToast($"Código {codigo} no existe. Cree el producto.");
                 cmbProducto.SelectedIndex = -1;
                 lblProductoNombre.Text = "";
                 txtPrecioUnitario.Clear();
-                btnProductoNuevo.Focus();
                 return;
             }
 
