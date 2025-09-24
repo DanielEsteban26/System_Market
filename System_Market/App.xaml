@@ -4,14 +4,15 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <!-- Tema claro/oscuro -->
+                <!-- Tema oscuro de Material Design -->
                 <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.Dark.xaml" />
 
-                <!-- Colores básicos -->
+                <!-- Paleta de colores principal y secundaria -->
                 <ResourceDictionary Source="pack://application:,,,/MaterialDesignColors;component/Themes/MaterialDesignColor.DeepPurple.xaml" />
                 <ResourceDictionary Source="pack://application:,,,/MaterialDesignColors;component/Themes/MaterialDesignColor.Lime.xaml" />
+
+                <!-- Defaults de Material Design (necesario para estilos base) -->
                 <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.Defaults.xaml" />
-        
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

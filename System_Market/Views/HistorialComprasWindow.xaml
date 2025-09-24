@@ -12,7 +12,12 @@
         SnapsToDevicePixels="True">
 
     <Window.Resources>
-        <!-- Paleta local (igual que HistorialVentas) -->
+        <!--
+            Paleta de colores y estilos reutilizables:
+            - Fondos, acentos y divisores para tarjetas y controles.
+            - Estilos de botones: primario, acento, peligro, neutro.
+            - Estilos de DataGrid para encabezados, celdas y filas.
+        -->
         <LinearGradientBrush x:Key="MainBgLocal" StartPoint="0,0" EndPoint="1,1">
             <GradientStop Color="#0F3F68" Offset="0"/>
             <GradientStop Color="#15B6C9" Offset="1"/>
@@ -145,31 +150,41 @@
 
     <Grid Margin="14">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/> <!-- Título -->
-            <RowDefinition Height="Auto"/> <!-- Tarjeta superior (Listado) -->
-            <RowDefinition Height="Auto"/> <!-- Tarjeta con dgCompras (fija/scroll) -->
-            <RowDefinition Height="Auto"/> <!-- GridSplitter (fila propia) -->
-            <RowDefinition Height="*"/>    <!-- Tarjeta detalles (resizable) -->
+            <RowDefinition Height="Auto"/>
+            <!-- Título -->
+            <RowDefinition Height="Auto"/>
+            <!-- Filtros y acciones -->
+            <RowDefinition Height="Auto"/>
+            <!-- Lista de compras -->
+            <RowDefinition Height="Auto"/>
+            <!-- GridSplitter -->
+            <RowDefinition Height="*"/>
+            <!-- Detalles de compra -->
         </Grid.RowDefinitions>
 
-        <!-- Título principal -->
+        <!--
+            TÍTULO PRINCIPAL:
+            - Icono y texto "Historial de compras".
+        -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12" VerticalAlignment="Center">
             <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8BB;" FontSize="20" Foreground="{StaticResource AccentTeal}" Margin="0,0,8,0"/>
             <TextBlock Text="Historial de compras" FontSize="26" FontWeight="Bold" Foreground="{StaticResource HeaderText}"/>
         </StackPanel>
 
-        <!-- Controles superiores: tarjeta con acciones (ahora: filtros por fecha) -->
+        <!--
+            FILTROS Y ACCIONES SUPERIORES:
+            - Permite filtrar compras por rango de fechas.
+            - Botón para aplicar el filtro.
+        -->
         <Border Grid.Row="1" CornerRadius="10" Background="{StaticResource CardBgLight}" Padding="12" Margin="0,0,0,12">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-
                 <TextBlock Text="Listado de compras" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource HeaderText}" VerticalAlignment="Center"/>
-
-                <!-- REEMPLAZADO: filtros por fecha -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <!-- Filtros de fecha -->
                     <StackPanel Orientation="Vertical" Margin="0,0,8,0">
                         <TextBlock Text="Desde" Foreground="{StaticResource HeaderText}" FontSize="11" Margin="2,0,0,2"/>
                         <DatePicker x:Name="dpDesdeCompra" Width="150"/>
@@ -188,17 +203,21 @@
             </Grid>
         </Border>
 
-        <!-- Lista de compras (tarjeta) -->
+        <!--
+            LISTA DE COMPRAS:
+            - DataGrid con las compras filtradas.
+            - Columnas: Proveedor, Fecha, Total, Estado, Motivo Anulación.
+            - Paginación: botones para navegar entre páginas y mostrar info de página actual.
+        -->
         <Border Grid.Row="2" CornerRadius="12" Background="{StaticResource CardBg}" Padding="12" Margin="0,0,0,8">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/> <!-- paginación -->
+                    <RowDefinition Height="Auto"/>
+                    <!-- paginación -->
                 </Grid.RowDefinitions>
-
                 <TextBlock Grid.Row="0" Text="Compras" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource HeaderText}" Margin="6,0,0,12"/>
-
                 <DataGrid x:Name="dgCompras"
                           Grid.Row="1"
                           AutoGenerateColumns="False"
@@ -221,21 +240,23 @@
                     <DataGrid.Resources>
                         <Style TargetType="DataGridCell" BasedOn="{StaticResource DataGridCellWhite}"/>
                     </DataGrid.Resources>
-
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Proveedor" Binding="{Binding ProveedorNombre}" Width="220">
-                            <DataGridTextColumn.ElementStyle><StaticResource ResourceKey="DataGridTextBlockWhite"/></DataGridTextColumn.ElementStyle>
+                            <DataGridTextColumn.ElementStyle>
+                                <StaticResource ResourceKey="DataGridTextBlockWhite"/>
+                            </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
                         <DataGridTextColumn Header="Fecha" Binding="{Binding Fecha, StringFormat={}{0:dd/MM/yyyy HH:mm}}" Width="200">
-                            <DataGridTextColumn.ElementStyle><StaticResource ResourceKey="DataGridTextBlockWhite"/></DataGridTextColumn.ElementStyle>
+                            <DataGridTextColumn.ElementStyle>
+                                <StaticResource ResourceKey="DataGridTextBlockWhite"/>
+                            </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
                         <DataGridTextColumn Header="Total" Binding="{Binding Total, StringFormat={}{0:N2}}" Width="120" ElementStyle="{StaticResource ResourceKey=DataGridTextBlockWhite}"/>
                         <DataGridTextColumn Header="Estado" Binding="{Binding Estado}" Width="120" ElementStyle="{StaticResource ResourceKey=DataGridTextBlockWhite}"/>
                         <DataGridTextColumn Header="Motivo Anulación" Binding="{Binding MotivoAnulacion}" Width="*" ElementStyle="{StaticResource ResourceKey=DataGridTextBlockWhite}"/>
                     </DataGrid.Columns>
                 </DataGrid>
-
-                <!-- PAGINACIÓN -->
+                <!-- Paginación -->
                 <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
                     <Button x:Name="btnPrevPage" Click="BtnPrevPage_Click" Style="{StaticResource NeutralButton}" Margin="0,0,8,0" Width="100">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
@@ -254,7 +275,10 @@
             </Grid>
         </Border>
 
-        <!-- GridSplitter en su propia fila: mueve sólo la sección de detalles -->
+        <!--
+            GRID SPLITTER:
+            - Permite redimensionar la sección de detalles.
+        -->
         <GridSplitter Grid.Row="3"
                       Height="8"
                       HorizontalAlignment="Stretch"
@@ -265,7 +289,12 @@
                       ResizeBehavior="PreviousAndNext"
                       Margin="0,0,0,0"/>
 
-        <!-- Detalles (resizable) -->
+        <!--
+            DETALLES DE COMPRA:
+            - DataGrid con los productos de la compra seleccionada.
+            - Columnas: Producto, Cantidad, Precio Unitario, Subtotal.
+            - Acciones: Anular compra, refrescar, cerrar ventana.
+        -->
         <Border Grid.Row="4" CornerRadius="12" Background="{StaticResource CardBgLight}" Padding="12" Margin="0,12,0,0">
             <Grid>
                 <Grid.RowDefinitions>
@@ -273,9 +302,7 @@
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
-
                 <TextBlock Grid.Row="0" Text="Detalles de la compra seleccionada" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource HeaderText}" Margin="4,0,0,8"/>
-
                 <DataGrid x:Name="dgDetallesCompra"
                           Grid.Row="1"
                           AutoGenerateColumns="False"
@@ -293,18 +320,18 @@
                     <DataGrid.Resources>
                         <Style TargetType="DataGridCell" BasedOn="{StaticResource DataGridCellWhite}"/>
                     </DataGrid.Resources>
-
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Producto" Binding="{Binding ProductoNombre}" Width="*">
-                            <DataGridTextColumn.ElementStyle><StaticResource ResourceKey="DataGridTextBlockWhite"/></DataGridTextColumn.ElementStyle>
+                            <DataGridTextColumn.ElementStyle>
+                                <StaticResource ResourceKey="DataGridTextBlockWhite"/>
+                            </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
                         <DataGridTextColumn Header="Cantidad" Binding="{Binding Cantidad}" Width="120" ElementStyle="{StaticResource ResourceKey=DataGridTextBlockWhite}"/>
                         <DataGridTextColumn Header="Precio Unitario" Binding="{Binding PrecioUnitario, StringFormat={}{0:N2}}" Width="150" ElementStyle="{StaticResource ResourceKey=DataGridTextBlockWhite}"/>
                         <DataGridTextColumn Header="Subtotal" Binding="{Binding Subtotal, StringFormat={}{0:N2}}" Width="150" ElementStyle="{StaticResource ResourceKey=DataGridTextBlockWhite}"/>
                     </DataGrid.Columns>
                 </DataGrid>
-
-                <!-- Pie: acciones (handlers existentes) -->
+                <!-- Acciones sobre la compra seleccionada -->
                 <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
                     <Button x:Name="btnAnularCompra" Click="btnAnularCompra_Click" Style="{StaticResource DangerButton}" Margin="0,0,8,0">
                         <StackPanel Orientation="Horizontal">
@@ -312,14 +339,12 @@
                             <TextBlock Text="Anular compra"/>
                         </StackPanel>
                     </Button>
-
                     <Button x:Name="btnRefrescar" Click="btnRefrescar_Click" Style="{StaticResource AccentButton}" Margin="0,0,8,0">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE863;" Margin="0,0,6,0"/>
                             <TextBlock Text="Refrescar"/>
                         </StackPanel>
                     </Button>
-
                     <Button x:Name="btnCerrar" Click="btnCerrar_Click" Style="{StaticResource NeutralButton}">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8BB;" Margin="0,0,6,0"/>

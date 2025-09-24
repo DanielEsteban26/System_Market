@@ -19,7 +19,7 @@
             <GradientStop Color="#0F3F68" Offset="1"/>
         </LinearGradientBrush>
 
-        <!-- Paleta -->
+        <!-- Paleta de colores y brushes -->
         <SolidColorBrush x:Key="CardBg" Color="#0D1B22"/>
         <SolidColorBrush x:Key="CardBgLight" Color="#12242C"/>
         <SolidColorBrush x:Key="AccentTeal" Color="#19C1D3"/>
@@ -30,7 +30,7 @@
         <SolidColorBrush x:Key="RowDivider" Color="#2E3A3F"/>
         <sys:Double x:Key="CtlHeight">40</sys:Double>
 
-        <!-- Pill button base (no cuadrados) -->
+        <!-- Botón base tipo "pill" para acciones principales -->
         <Style x:Key="PillButtonBase" TargetType="Button">
             <Setter Property="Foreground" Value="{StaticResource HeaderText}"/>
             <Setter Property="Padding" Value="12,8"/>
@@ -48,6 +48,7 @@
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
+                            <!-- Efecto de escala al pasar el mouse o presionar -->
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Bd" Property="RenderTransform">
                                     <Setter.Value>
@@ -71,6 +72,7 @@
             </Setter>
         </Style>
 
+        <!-- Variantes de color para acciones -->
         <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource PillButtonBase}">
             <Setter Property="Background" Value="{StaticResource AccentTeal}"/>
         </Style>
@@ -84,7 +86,7 @@
             <Setter Property="Background" Value="#36474C"/>
         </Style>
 
-        <!-- Selectable variants -->
+        <!-- Botones dependientes de selección en la grilla -->
         <Style x:Key="AccentButtonSelectable" TargetType="Button" BasedOn="{StaticResource AccentButton}">
             <Setter Property="IsEnabled" Value="True"/>
             <Style.Triggers>
@@ -102,7 +104,7 @@
             </Style.Triggers>
         </Style>
 
-        <!-- Estilos idénticos a ProductoWindow: encabezados y DataGrid base -->
+        <!-- Estilos de DataGrid y encabezados -->
         <Style TargetType="DataGridColumnHeader">
             <Setter Property="Foreground" Value="{StaticResource AccentTeal}"/>
             <Setter Property="Background" Value="Transparent"/>
@@ -122,7 +124,7 @@
             <Setter Property="FontSize" Value="14"/>
         </Style>
 
-        <!-- Estilos de controles reutilizables (DarkTextBox / FancyComboBox) -->
+        <!-- TextBox y ComboBox reutilizables para formularios oscuros -->
         <Style x:Key="DarkTextBox" TargetType="TextBox">
             <Setter Property="Height" Value="{StaticResource CtlHeight}"/>
             <Setter Property="Background" Value="{StaticResource CardBg}"/>
@@ -237,7 +239,7 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Encabezado -->
+        <!-- Encabezado principal de la ventana de usuarios -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12" VerticalAlignment="Center">
             <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE77B;" FontSize="26" Foreground="{StaticResource AccentTeal}" Margin="0,0,12,0"/>
             <StackPanel>
@@ -246,7 +248,7 @@
             </StackPanel>
         </StackPanel>
 
-        <!-- Formulario (tarjeta) -->
+        <!-- Formulario de usuario (tarjeta) -->
         <Border Grid.Row="1" CornerRadius="10" Background="{StaticResource CardBgLight}" Padding="14" Margin="0,0,0,12" materialDesign:ShadowAssist.ShadowDepth="Depth1">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -256,19 +258,19 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Nombre -->
+                <!-- Campo: Nombre completo -->
                 <StackPanel Grid.Column="0" Margin="0,0,10,0">
                     <TextBlock Text="Nombre completo" Foreground="{StaticResource AccentTeal}" FontSize="12" Margin="2,0,0,6"/>
                     <TextBox x:Name="txtNombre" Style="{StaticResource DarkTextBox}" materialDesign:HintAssist.Hint="Nombre completo"/>
                 </StackPanel>
 
-                <!-- Usuario -->
+                <!-- Campo: Usuario -->
                 <StackPanel Grid.Column="1" Margin="0,0,10,0">
                     <TextBlock Text="Usuario" Foreground="{StaticResource AccentTeal}" FontSize="12" Margin="2,0,0,6"/>
                     <TextBox x:Name="txtUsuario" Style="{StaticResource DarkTextBox}" materialDesign:HintAssist.Hint="Nombre de usuario"/>
                 </StackPanel>
 
-                <!-- Contraseña (Border envolvente para estilo redondeado, contenido centrado) -->
+                <!-- Campo: Contraseña -->
                 <StackPanel Grid.Column="2" Margin="0,0,10,0" VerticalAlignment="Center">
                     <TextBlock Text="Contraseña" Foreground="{StaticResource AccentTeal}" FontSize="12" Margin="2,0,0,6"/>
                     <Border Background="{StaticResource CardBg}"
@@ -289,7 +291,7 @@
                     </Border>
                 </StackPanel>
 
-                <!-- Rol (ComboBox con estilo FancyComboBox) -->
+                <!-- Campo: Rol -->
                 <StackPanel Grid.Column="3">
                     <TextBlock Text="Rol" Foreground="{StaticResource AccentTeal}" FontSize="12" Margin="2,0,0,6"/>
                     <ComboBox x:Name="cbRol" Style="{StaticResource FancyComboBox}" materialDesign:HintAssist.Hint="Selecciona un rol">
@@ -300,7 +302,7 @@
             </Grid>
         </Border>
 
-        <!-- Listado -->
+        <!-- Listado de usuarios -->
         <Border Grid.Row="2" CornerRadius="10" Background="{StaticResource CardBg}" Padding="12" materialDesign:ShadowAssist.ShadowDepth="Depth2">
             <Grid>
                 <TextBlock Text="Lista de usuarios" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource HeaderText}" Margin="6,0,0,8"/>
@@ -331,7 +333,7 @@
             </Grid>
         </Border>
 
-        <!-- Acciones (botones) -->
+        <!-- Botones de acción -->
         <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,12,0,0">
             <Button x:Name="btnAgregar" Style="{StaticResource PrimaryButton}" Click="btnAgregar_Click">
                 <StackPanel Orientation="Horizontal">

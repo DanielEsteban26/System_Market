@@ -8,36 +8,41 @@
         Background="{DynamicResource MaterialDesignPaper}"
         FontFamily="Segoe UI"
         MinWidth="340" MinHeight="160">
-	<Grid Margin="16">
-		<Grid.ColumnDefinitions>
-			<ColumnDefinition Width="277*"/>
-			<ColumnDefinition Width="137*"/>
-		</Grid.ColumnDefinitions>
-		<Grid.RowDefinitions>
-			<RowDefinition Height="Auto"/>
-			<RowDefinition Height="16"/>
-			<RowDefinition Height="Auto"/>
-			<RowDefinition Height="12"/>
-			<RowDefinition Height="Auto"/>
-		</Grid.RowDefinitions>
+    <Grid Margin="16">
+        <!-- Definición de columnas para distribuir el contenido y los botones -->
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="277*"/>
+            <ColumnDefinition Width="137*"/>
+        </Grid.ColumnDefinitions>
+        <!-- Definición de filas para separar título, código y botones -->
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="16"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="12"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
 
-		<TextBlock x:Name="txtTitulo"
+        <!-- Título del diálogo, puede ser modificado desde el code-behind -->
+        <TextBlock x:Name="txtTitulo"
                    FontSize="16"
                    FontWeight="SemiBold"
                    Text="Código escaneado"
                    Margin="0,0,0,4" Grid.ColumnSpan="2"/>
 
-		<TextBlock x:Name="txtCodigo"
+        <!-- Muestra el código escaneado o ingresado, abarca varias filas para mayor visibilidad -->
+        <TextBlock x:Name="txtCodigo"
                    Grid.Row="1"
                    FontSize="14"
                    Foreground="#FF555555"
                    TextWrapping="Wrap" Grid.ColumnSpan="2" Margin="0,16,0,12" Grid.RowSpan="3"/>
 
-		<StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Left" Grid.ColumnSpan="2">
-			<Button x:Name="btnVenta" Width="90" Margin="0,0,8,0" Click="BtnVenta_Click" Content="Venta"/>
-			<Button x:Name="btnCompra" Width="90" Margin="0,0,8,0" Click="BtnCompra_Click" Content="Compra"/>
-			<Button x:Name="btnCrear" Width="138" Margin="0,0,8,0" Click="BtnCrear_Click" Content="Crear producto"/>
-			<Button x:Name="btnCancelar" Width="90" Click="BtnCancelar_Click" Content="Cancelar"/>
-		</StackPanel>
-	</Grid>
+        <!-- Botonera de acciones: Venta, Compra, Crear producto y Cancelar -->
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Left" Grid.ColumnSpan="2">
+            <Button x:Name="btnVenta" Width="90" Margin="0,0,8,0" Click="BtnVenta_Click" Content="Venta"/>
+            <Button x:Name="btnCompra" Width="90" Margin="0,0,8,0" Click="BtnCompra_Click" Content="Compra"/>
+            <Button x:Name="btnCrear" Width="138" Margin="0,0,8,0" Click="BtnCrear_Click" Content="Crear producto"/>
+            <Button x:Name="btnCancelar" Width="90" Click="BtnCancelar_Click" Content="Cancelar"/>
+        </StackPanel>
+    </Grid>
 </Window>

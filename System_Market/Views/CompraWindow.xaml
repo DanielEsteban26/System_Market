@@ -363,8 +363,6 @@
                         </Border>
                     </StackPanel>
 
-                    <!-- Botón "Nuevo" eliminado -->
-
                     <!-- Cantidad -->
                     <StackPanel Grid.Column="2" Margin="0,0,8,0" VerticalAlignment="Top">
                         <TextBlock Text="Cantidad" FontSize="12" Margin="2,0,0,4" Foreground="{StaticResource AccentTeal}"/>

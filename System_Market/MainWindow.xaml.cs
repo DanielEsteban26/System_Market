@@ -17,6 +17,8 @@ using System_Market.Models;
 
 namespace System_Market
 {
+    // Ventana principal del sistema: dashboard, accesos rápidos y gestión de entidades.
+    // Controla la sesión, permisos, acciones rápidas y el flujo de escaneo de códigos.
     public partial class MainWindow : Window
     {
         private readonly string _conn;
@@ -45,7 +47,7 @@ namespace System_Market
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                          "System_Market", "quick_actions.json");
 
-        // Nuevo: constructor opcional que recibe el usuario logueado
+        // Constructor principal, recibe el usuario logueado (opcional)
         public MainWindow(Usuario? usuario = null)
         {
             InitializeComponent();
@@ -56,11 +58,10 @@ namespace System_Market
             _ventaService = new VentaService(_conn);
             _compraService = new CompraService(_conn);
 
-            // Bind dinámico
             icQuickActions.ItemsSource = _accionesRapidas;
             cbAccion.ItemsSource = _catalogoAcciones;
 
-            // Si se recibió usuario al crear la ventana, guardarlo en la sesión global
+            // Establece usuario en sesión y actualiza UI
             if (usuario != null)
             {
                 System_Market.Models.SesionActual.Usuario = usuario;
@@ -73,10 +74,9 @@ namespace System_Market
                 txtRolUsuario.Text = System_Market.Models.SesionActual.Usuario?.Rol ?? txtRolUsuario.Text;
             }
 
-            // Aplicar permisos según rol actual (deshabilita botones / filtra acciones)
             AplicarPermisosMainWindow();
 
-            // Cargar acciones guardadas o semillas
+            // Cargar acciones rápidas guardadas o por defecto
             if (!CargarAccionesGuardadas())
             {
                 AgregarAccionSiNoExiste("NuevaVenta");
@@ -110,7 +110,7 @@ namespace System_Market
             catch { }
         }
 
-        // Este método se llama desde XAML Loaded="Window_Loaded"
+        // Evento Loaded: inicia el servicio de escáner y refresca el dashboard
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
             try
@@ -125,6 +125,7 @@ namespace System_Market
             await RefreshAsync();
         }
 
+        // Refresca los datos principales del dashboard
         private async Task RefreshAsync()
         {
             try
@@ -160,6 +161,7 @@ namespace System_Market
             }
         }
 
+        // Devuelve el producto más vendido en el rango dado
         private string? ObtenerProductoMasVendidoEnRango(DateTime desde, DateTime hasta)
         {
             try
@@ -194,7 +196,7 @@ namespace System_Market
             return null;
         }
 
-        // Botones del UI
+        // --- Acciones de botones principales ---
         private async void BtnRefrescarDashboard_Click(object sender, RoutedEventArgs e) => await RefreshAsync();
         private async void BtnDashboard_Click(object sender, RoutedEventArgs e) { new DashboardWindow().ShowDialog(); await RefreshAsync(); }
         private async void BtnProductos_Click(object sender, RoutedEventArgs e) { new ProductoWindow().ShowDialog(); await RefreshAsync(); }
@@ -221,6 +223,7 @@ namespace System_Market
             }
         }
 
+        // Acciones rápidas: agregar, ejecutar y quitar
         private void BtnAgregarAccion_Click(object sender, RoutedEventArgs e)
         {
             if (cbAccion.SelectedValue is string clave)
@@ -246,22 +249,33 @@ namespace System_Market
             Icono = def.Icono,
             Ejecutar = def.Clave switch
             {
-                "NuevaVenta" => () => { new VentaWindow().ShowDialog(); _ = RefreshAsync(); },
-                "NuevaCompra" => () => { new CompraWindow().ShowDialog(); _ = RefreshAsync(); },
+                "NuevaVenta" => () => { new VentaWindow().ShowDialog(); _ = RefreshAsync(); }
+                ,
+                "NuevaCompra" => () => { new CompraWindow().ShowDialog(); _ = RefreshAsync(); }
+                ,
                 "AgregarProducto" => () =>
                 {
                     var win = new ProductoEdicionWindow(_conn);
                     if (win.ShowDialog() == true) _productoService.AgregarProducto(win.Producto);
                     _ = RefreshAsync();
-                },
-                "NuevoProveedor" => () => { new ProveedorWindow().ShowDialog(); _ = RefreshAsync(); },
-                "Productos" => () => { new ProductoWindow().ShowDialog(); _ = RefreshAsync(); },
-                "Ventas" => () => { new HistorialVentasWindow().ShowDialog(); _ = RefreshAsync(); },
-                "Compras" => () => { new HistorialComprasWindow().ShowDialog(); _ = RefreshAsync(); },
-                "Proveedores" => () => { new ProveedorWindow().ShowDialog(); _ = RefreshAsync(); },
-                "Usuarios" => () => { new UsuarioWindow().ShowDialog(); _ = RefreshAsync(); },
-                "Categorias" => () => { new CategoriaWindow().ShowDialog(); _ = RefreshAsync(); },
-                "Dashboard" => () => { new DashboardWindow().ShowDialog(); _ = RefreshAsync(); },
+                }
+                ,
+                "NuevoProveedor" => () => { new ProveedorWindow().ShowDialog(); _ = RefreshAsync(); }
+                ,
+                "Productos" => () => { new ProductoWindow().ShowDialog(); _ = RefreshAsync(); }
+                ,
+                "Ventas" => () => { new HistorialVentasWindow().ShowDialog(); _ = RefreshAsync(); }
+                ,
+                "Compras" => () => { new HistorialComprasWindow().ShowDialog(); _ = RefreshAsync(); }
+                ,
+                "Proveedores" => () => { new ProveedorWindow().ShowDialog(); _ = RefreshAsync(); }
+                ,
+                "Usuarios" => () => { new UsuarioWindow().ShowDialog(); _ = RefreshAsync(); }
+                ,
+                "Categorias" => () => { new CategoriaWindow().ShowDialog(); _ = RefreshAsync(); }
+                ,
+                "Dashboard" => () => { new DashboardWindow().ShowDialog(); _ = RefreshAsync(); }
+                ,
                 _ => () => { }
             }
         };
@@ -280,6 +294,7 @@ namespace System_Market
             }
         }
 
+        // Persistencia de acciones rápidas
         private bool CargarAccionesGuardadas()
         {
             try
@@ -327,17 +342,10 @@ namespace System_Market
 
                 if (result == true && login.UsuarioLogueado != null)
                 {
-                    // Guardar sesión global
                     System_Market.Models.SesionActual.Usuario = login.UsuarioLogueado;
-
-                    // Actualizar UI
                     txtUsuarioActual.Text = login.UsuarioLogueado.Nombre;
                     txtRolUsuario.Text = login.UsuarioLogueado.Rol ?? txtRolUsuario.Text;
-
-                    // Aplicar permisos según nuevo usuario
                     AplicarPermisosMainWindow();
-
-                    // Refrescar datos y mostrar
                     await RefreshAsync();
                     this.Show();
                 }
@@ -353,22 +361,18 @@ namespace System_Market
             }
         }
 
+        // Aplica permisos y visibilidad de controles según el rol del usuario
         private void AplicarPermisosMainWindow()
         {
             var admin = System_Market.Models.SesionActual.EsAdministrador();
 
-            // Habilitar/inhabilitar botones del menú (compras, usuarios, proveedores, categorías, reportes)
-            // Verificamos null por si XAML no contiene el control (seguro)
             try { btnUsuarios.IsEnabled = admin; } catch { }
             try { btnCompras.IsEnabled = admin; } catch { }
             try { btnProveedores.IsEnabled = admin; } catch { }
             try { btnCategorias.IsEnabled = admin; } catch { }
             try { btnReportes.IsEnabled = admin; } catch { }
-
-            // Opcional: si no admin, ocultar botón de "Usuarios" por claridad
             try { btnUsuarios.Visibility = admin ? Visibility.Visible : Visibility.Collapsed; } catch { }
 
-            // Filtrar catálogo de acciones rápidas para cajero
             if (!admin)
             {
                 var permitidas = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -380,23 +384,20 @@ namespace System_Market
 
                 _catalogoAcciones.RemoveAll(a => !permitidas.Contains(a.Clave));
 
-                // Limpiar acciones rápidas guardadas que no estén permitidas
                 for (int i = _accionesRapidas.Count - 1; i >= 0; i--)
                 {
                     if (!_catalogoAcciones.Any(c => c.Clave == _accionesRapidas[i].Clave))
                         _accionesRapidas.RemoveAt(i);
                 }
 
-                // Refrescar ComboBox catálogo
                 try { cbAccion.ItemsSource = null; cbAccion.ItemsSource = _catalogoAcciones; }
                 catch { }
             }
         }
 
-        // Maneja invocación desde el servicio de escáner (asegura ejecución en hilo UI)
+        // Maneja códigos escaneados desde el servicio de escáner (en hilo UI)
         public void HandleScannedCode(string codigo)
         {
-            // Solo procesar si MainWindow está activa y visible
             if (!this.IsActive || !this.IsVisible)
                 return;
 
@@ -418,6 +419,7 @@ namespace System_Market
 
         private Queue<string> _pendingVentaCodes = new Queue<string>();
 
+        // Procesa el código de barras escaneado y decide la acción según el rol y existencia del producto
         private void ProcesarCodigoBarras(string codigo)
         {
             if (string.IsNullOrWhiteSpace(codigo)) return;
@@ -425,13 +427,12 @@ namespace System_Market
             var producto = _productoService.ObtenerPorCodigoBarras(codigo);
             bool existeProducto = producto != null;
 
-            // Determinar rol / permisos
             var rol = System_Market.Models.SesionActual.Usuario?.Rol ?? string.Empty;
             var esAdmin = System_Market.Models.SesionActual.EsAdministrador();
             var esCajero = !esAdmin && (string.Equals(rol, "Cajero", StringComparison.OrdinalIgnoreCase)
                                         || string.Equals(rol, "Cajera", StringComparison.OrdinalIgnoreCase));
 
-            // Regla: si es cajero/cajera y el producto existe -> ir directo a venta (sin modal)
+            // Si es cajero y el producto existe, ir directo a venta
             if (esCajero && existeProducto)
             {
                 try
@@ -447,7 +448,7 @@ namespace System_Market
                 return;
             }
 
-            // Mostrar modal con las opciones (CodeActionDialogWindow ya controla visibilidad según rol y existencia)
+            // Mostrar diálogo de acción según rol y existencia
             var dlg = new CodeActionDialogWindow(codigo, existeProducto, rol) { Owner = this };
             if (dlg.ShowDialog() != true) return;
 
@@ -487,7 +488,6 @@ namespace System_Market
             }
             finally
             {
-                // 5) Si ninguna ventana especializada está activa, invoca MainWindow.HandleScannedCode
                 if (!handled)
                 {
                     var mainWin = Application.Current.Windows
@@ -501,7 +501,6 @@ namespace System_Market
                     }
                     else
                     {
-                        // Si por alguna razón no hay MainWindow, encola para futura venta
                         if (_pendingVentaCodes.Count > 5) _pendingVentaCodes.Dequeue();
                         _pendingVentaCodes.Enqueue(codigo);
                     }

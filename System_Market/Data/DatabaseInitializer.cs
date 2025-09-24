@@ -4,36 +4,44 @@ using System.IO;
 
 namespace System_Market.Data
 {
+    // Clase encargada de inicializar la base de datos SQLite del sistema.
+    // Se asegura de que la carpeta, el archivo y todas las tablas necesarias existan.
     public static class DatabaseInitializer
     {
-        // Carpeta en AppData\Roaming\Minimarket
+        // Ruta de la carpeta donde se guardará la base de datos (en AppData\Roaming\Minimarket)
         private static string folderPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Minimarket");
 
+        // Nombre del archivo de la base de datos
         private static string dbFile = "minimarket.db";
+        // Ruta completa al archivo de la base de datos
         private static string dbPath = Path.Combine(folderPath, dbFile);
+        // Cadena de conexión para acceder a la base de datos SQLite
         private static string connectionString = $"Data Source={dbPath};Version=3;";
 
+        // Inicializa la base de datos: crea la carpeta, el archivo y las tablas si no existen.
         public static void InitializeDatabase()
         {
-            // Crear carpeta en AppData si no existe
+            // Si la carpeta donde irá la base de datos no existe, la crea.
             if (!Directory.Exists(folderPath))
             {
                 Directory.CreateDirectory(folderPath);
                 Console.WriteLine("📂 Carpeta creada en: " + folderPath);
             }
 
-            // Crear archivo si no existe
+            // Si el archivo de la base de datos no existe, lo crea.
             if (!File.Exists(dbPath))
             {
                 SQLiteConnection.CreateFile(dbPath);
                 Console.WriteLine("📦 Base de datos creada en: " + dbPath);
             }
 
+            // Abre la conexión a la base de datos para crear/verificar las tablas.
             using (var connection = new SQLiteConnection(connectionString))
             {
                 connection.Open();
 
+                // Script para crear la tabla de usuarios, con roles y validación de rol.
                 string sqlUsuarios = @"
                 CREATE TABLE IF NOT EXISTS Usuarios (
                     Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -43,6 +51,7 @@ namespace System_Market.Data
                     Rol TEXT NOT NULL CHECK(Rol IN ('Administrador', 'Cajero'))
                 );";
 
+                // Script para crear la tabla de proveedores.
                 string sqlProveedores = @"
                 CREATE TABLE IF NOT EXISTS Proveedores (
                     Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -51,12 +60,14 @@ namespace System_Market.Data
                     Telefono TEXT
                 );";
 
+                // Script para crear la tabla de categorías de productos.
                 string sqlCategorias = @"
                 CREATE TABLE IF NOT EXISTS Categorias (
                     Id INTEGER PRIMARY KEY AUTOINCREMENT,
                     Nombre TEXT NOT NULL
                 );";
 
+                // Script para crear la tabla de productos, con claves foráneas a categorías y proveedores.
                 string sqlProductos = @"
                 CREATE TABLE IF NOT EXISTS Productos (
                     Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -71,6 +82,7 @@ namespace System_Market.Data
                     FOREIGN KEY (ProveedorId) REFERENCES Proveedores(Id)
                 );";
 
+                // Script para crear la tabla de compras.
                 string sqlCompras = @"
                 CREATE TABLE IF NOT EXISTS Compras (
                     Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -84,6 +96,7 @@ namespace System_Market.Data
                     FOREIGN KEY (ProveedorId) REFERENCES Proveedores(Id)
                 );";
 
+                // Script para crear la tabla de detalle de compras (productos comprados en cada compra).
                 string sqlDetalleCompras = @"
                 CREATE TABLE IF NOT EXISTS DetalleCompras (
                     Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -96,6 +109,7 @@ namespace System_Market.Data
                     FOREIGN KEY (ProductoId) REFERENCES Productos(Id)
                 );";
 
+                // Script para crear la tabla de ventas.
                 string sqlVentas = @"
                 CREATE TABLE IF NOT EXISTS Ventas (
                     Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -107,6 +121,7 @@ namespace System_Market.Data
                     FOREIGN KEY (UsuarioId) REFERENCES Usuarios(Id)
                 );";
 
+                // Script para crear la tabla de detalle de ventas (productos vendidos en cada venta).
                 string sqlDetalleVentas = @"
                 CREATE TABLE IF NOT EXISTS DetalleVentas (
                     Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -119,7 +134,7 @@ namespace System_Market.Data
                     FOREIGN KEY (ProductoId) REFERENCES Productos(Id)
                 );";
 
-                // Ejecutar todas las sentencias
+                // Ejecuta cada script SQL para crear/verificar las tablas en la base de datos.
                 var cmd = new SQLiteCommand(sqlUsuarios, connection);
                 cmd.ExecuteNonQuery();
 
@@ -148,6 +163,7 @@ namespace System_Market.Data
             }
         }
 
+        // Devuelve la cadena de conexión a la base de datos SQLite para ser usada en el resto del sistema.
         public static string GetConnectionString() => connectionString;
     }
 }

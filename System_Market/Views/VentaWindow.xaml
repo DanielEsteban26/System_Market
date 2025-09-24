@@ -59,6 +59,7 @@
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
+                            <!-- Efecto de escala al pasar el mouse o presionar -->
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Trigger.EnterActions>
                                     <BeginStoryboard>
@@ -98,6 +99,7 @@
             </Setter>
         </Style>
 
+        <!-- Variantes de color para acciones secundarias -->
         <Style x:Key="AccentButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
             <Setter Property="Background" Value="#0288D1"/>
             <Setter Property="BorderBrush" Value="#026C99"/>
@@ -111,7 +113,7 @@
             <Setter Property="BorderBrush" Value="#4B6168"/>
         </Style>
 
-        <!-- Small action button styles (para las acciones en la fila) -->
+        <!-- Botones pequeños para acciones en la grilla -->
         <Style x:Key="ActionPrimarySmall" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
             <Setter Property="MinHeight" Value="40"/>
             <Setter Property="MinWidth" Value="120"/>
@@ -198,7 +200,7 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Encabezado -->
+        <!-- Encabezado principal de la ventana de venta -->
         <DockPanel Grid.Row="0" Margin="0,0,0,12">
             <StackPanel Orientation="Horizontal">
                 <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE719;" FontSize="20"
@@ -208,7 +210,7 @@
             </StackPanel>
         </DockPanel>
 
-        <!-- Búsqueda / escaneo (estética mejorada) -->
+        <!-- Búsqueda / escaneo de producto -->
         <Border Grid.Row="1" CornerRadius="12" Background="{StaticResource CardBgLight}" Padding="12" Margin="0,0,0,12">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -319,7 +321,7 @@
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
 
-                        <!-- Acciones: Disminuir / Aumentar (mismas rutas de evento) -->
+                        <!-- Acciones: Disminuir / Aumentar cantidad -->
                         <DataGridTemplateColumn Header="Acciones" Width="240">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
@@ -352,7 +354,7 @@
             </Grid>
         </Border>
 
-        <!-- Pie: total y registrar -->
+        <!-- Pie: total y registrar venta -->
         <DockPanel Grid.Row="3">
             <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
@@ -374,7 +376,7 @@
             </StackPanel>
         </DockPanel>
 
-        <!-- Snackbar (sin tocar lógica) -->
+        <!-- Snackbar para notificaciones -->
         <materialDesign:Snackbar x:Name="snackbar"
                                  HorizontalAlignment="Right"
                                  VerticalAlignment="Bottom"

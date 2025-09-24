@@ -13,16 +13,19 @@
         SnapsToDevicePixels="True">
 
     <Window.Resources>
+        <!-- Fondo principal en degradado -->
         <LinearGradientBrush x:Key="MainBg" StartPoint="0,0" EndPoint="1,1">
             <GradientStop Color="#0F225E" Offset="0"/>
             <GradientStop Color="#0E0F73" Offset="0.3"/>
             <GradientStop Color="#1A5AAE" Offset="1"/>
         </LinearGradientBrush>
 
+        <!-- Altura y tamaño de fuente estándar para controles -->
         <sys:Double x:Key="CtlHeight">44</sys:Double>
         <sys:Double x:Key="CtlFontSize">14</sys:Double>
         <Thickness x:Key="CtlPadding">16,8</Thickness>
 
+        <!-- Gradientes para botones principales y de cancelar -->
         <LinearGradientBrush x:Key="BtnPrimaryBg" StartPoint="0,0" EndPoint="1,1">
             <GradientStop Color="#2766FF" Offset="0"/>
             <GradientStop Color="#0F3CF0" Offset="1"/>
@@ -32,12 +35,14 @@
             <GradientStop Color="#0B8DE6" Offset="1"/>
         </LinearGradientBrush>
 
+        <!-- Estilo para bordes tipo "píldora" en campos -->
         <Style x:Key="PillBorder" TargetType="Border">
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Background" Value="#1AFFFFFF"/>
             <Setter Property="Padding" Value="6"/>
         </Style>
 
+        <!-- TextBox plano, sin borde, para inputs -->
         <Style x:Key="FlatTextBox" TargetType="TextBox">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -47,7 +52,7 @@
             <Setter Property="Padding" Value="6,0"/>
         </Style>
 
-        <!-- ComboBox mejorado (sin cambios) -->
+        <!-- ComboBox personalizado para mejor apariencia -->
         <Style x:Key="NiceComboBox" TargetType="ComboBox">
             <!-- ...igual que antes... -->
             <Setter Property="Foreground" Value="White"/>
@@ -124,6 +129,7 @@
             <!-- ItemContainerStyle idem -->
         </Style>
 
+        <!-- Estilo para el título principal -->
         <Style x:Key="HeaderTitle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="22"/>
             <Setter Property="FontWeight" Value="Bold"/>
@@ -131,6 +137,7 @@
             <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
 
+        <!-- Estilo para etiquetas de campos -->
         <Style x:Key="FieldLabel" TargetType="TextBlock">
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
@@ -139,7 +146,7 @@
             <Setter Property="Margin" Value="2,0,0,6"/>
         </Style>
 
-        <!-- Botón primario con efecto -->
+        <!-- Botón principal con efecto visual -->
         <Style x:Key="PrimaryActionButton" TargetType="Button">
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="Background" Value="{StaticResource BtnPrimaryBg}"/>
@@ -191,6 +198,7 @@
             </Style.Triggers>
         </Style>
 
+        <!-- Botón de cancelar basado en el principal -->
         <Style x:Key="CancelActionButton" TargetType="Button" BasedOn="{StaticResource PrimaryActionButton}">
             <Setter Property="Background" Value="{StaticResource BtnCancelBg}"/>
             <Setter Property="MinWidth" Value="160"/>
@@ -208,10 +216,12 @@
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
+        <!-- Título principal de la ventana -->
         <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Margin="10,8,10,16">
             <TextBlock Style="{StaticResource HeaderTitle}" Text="DATOS DEL PRODUCTO" />
         </StackPanel>
 
+        <!-- Formulario principal de edición de producto -->
         <Border Grid.Row="1" Grid.ColumnSpan="2" CornerRadius="12" Background="#0D000000" Padding="18" Margin="10,0,10,16">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -228,6 +238,7 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
+                <!-- Campo: Código de barras -->
                 <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,12,0">
                     <TextBlock Style="{StaticResource FieldLabel}" Text="CÓDIGO DE BARRAS"/>
                     <Border Style="{StaticResource PillBorder}">
@@ -237,6 +248,7 @@
                     <TextBlock x:Name="txtEstadoCodigo" FontSize="11" Foreground="#88FFFFFF" Margin="4,6,0,0" Text="Escanear o escribe codigo"/>
                 </StackPanel>
 
+                <!-- Campo: Nombre del producto -->
                 <StackPanel Grid.Row="0" Grid.Column="1" Margin="12,0,0,0">
                     <TextBlock Style="{StaticResource FieldLabel}" Text="NOMBRE DEL PRODUCTO"/>
                     <Border Style="{StaticResource PillBorder}">
@@ -245,6 +257,7 @@
                     </Border>
                 </StackPanel>
 
+                <!-- Campo: Categoría -->
                 <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,12,0">
                     <TextBlock Style="{StaticResource FieldLabel}" Text="CATEGORÍA"/>
                     <Border Style="{StaticResource PillBorder}">
@@ -254,6 +267,7 @@
                     </Border>
                 </StackPanel>
 
+                <!-- Campo: Proveedor -->
                 <StackPanel Grid.Row="2" Grid.Column="1" Margin="12,0,0,0">
                     <TextBlock Style="{StaticResource FieldLabel}" Text="PROVEEDOR"/>
                     <Border Style="{StaticResource PillBorder}">
@@ -263,6 +277,7 @@
                     </Border>
                 </StackPanel>
 
+                <!-- Campo: Precio de compra -->
                 <StackPanel Grid.Row="4" Grid.Column="0" Margin="0,0,12,0">
                     <TextBlock Style="{StaticResource FieldLabel}" Text="PRECIO DE COMPRA"/>
                     <Grid>
@@ -281,6 +296,7 @@
                     </Grid>
                 </StackPanel>
 
+                <!-- Campo: Precio de venta -->
                 <StackPanel Grid.Row="4" Grid.Column="1" Margin="12,0,0,0">
                     <TextBlock Style="{StaticResource FieldLabel}" Text="PRECIO DE VENTA (S)"/>
                     <Grid>
@@ -299,6 +315,7 @@
                     </Grid>
                 </StackPanel>
 
+                <!-- Campo: Stock -->
                 <StackPanel Grid.Row="6" Grid.ColumnSpan="2" Margin="0,10,0,0">
                     <TextBlock Style="{StaticResource FieldLabel}" Text="CANTIDAD EN-STOCK"/>
                     <Border Style="{StaticResource PillBorder}" Width="220">
@@ -310,6 +327,7 @@
             </Grid>
         </Border>
 
+        <!-- Botones de acción: Cancelar y Guardar -->
         <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="10,0,10,12">
             <Button x:Name="BtnCancelar" Content="←  Cancelar"
                     Style="{StaticResource CancelActionButton}"

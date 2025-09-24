@@ -18,31 +18,37 @@ namespace System_Market.Views
 {
     public partial class CompraWindow : Window
     {
+        // Servicios para operaciones de compra, proveedor y producto
         private readonly CompraService _compraService;
         private readonly ProveedorService _proveedorService;
         private readonly ProductoService _producto_service;
 
+        // Lista de detalles de la compra actual (productos agregados)
         private readonly List<DetalleCompra> _detalles = new();
 
+        // Lista de productos y vista filtrable para el ComboBox
         private List<Producto> _productos = new();
         private ICollectionView? _vistaProductos;
 
+        // Constantes y expresiones regulares para validación de datos
         private const string Simbolo = "S/";
         private static readonly Regex RegexEntero = new(@"^[0-9]+$", RegexOptions.Compiled);
         private static readonly Regex RegexDecimal = new(@"^[0-9\.,]+$", RegexOptions.Compiled);
 
+        // Cola de mensajes para mostrar notificaciones tipo Snackbar
         private readonly SnackbarMessageQueue _snackbarQueue = new(TimeSpan.FromSeconds(3));
 
+        // Variables para control de escaneo de códigos de barras
         private DateTime _lastScanHandled = DateTime.MinValue;
-        private string? _ultimoCodigoEscaneado; // para prellenar al crear producto
+        private string? _ultimoCodigoEscaneado; // Último código escaneado
 
-        // --- Nuevos miembros para detección de escaneo rápido ---
+        // Buffer y timer para detectar secuencias rápidas de teclado (escáner)
         private readonly StringBuilder _scanBuffer = new();
         private readonly DispatcherTimer _scanTimer;
         private DateTime _lastKeystroke = DateTime.MinValue;
-        private readonly int _scanThresholdMs = 80; // umbral entre teclas para considerar "scan"
+        private readonly int _scanThresholdMs = 80; // ms entre teclas para considerar escaneo
 
-        // apoyo para captura cuando el primer carácter fue escrito en otra TextBox
+        // Soporte para capturar el primer carácter si se escribió en un TextBox
         private TextBox? _scanSourceTextBox;
         private int _scanSourceOriginalLength;
 
@@ -52,6 +58,7 @@ namespace System_Market.Views
 
             snackbar.MessageQueue = _snackbarQueue;
 
+            // Inicialización de servicios con la cadena de conexión
             string conn = DatabaseInitializer.GetConnectionString();
             _compraService = new CompraService(conn);
             _proveedorService = new ProveedorService(conn);
@@ -59,15 +66,15 @@ namespace System_Market.Views
 
             CargarCombos();
 
-            // Inicializar timer que detecta final de secuencia rápida (escáner)
+            // Configuración del timer para detectar fin de escaneo rápido
             _scanTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(160) };
             _scanTimer.Tick += ScanTimer_Tick;
 
-            // Registrar interceptores globales para evitar que el escáner escriba en cantidad
+            // Interceptores globales para capturar escaneos y evitar escritura accidental
             this.PreviewTextInput += Global_PreviewTextInput;
             this.PreviewKeyDown += Global_PreviewKeyDown;
 
-            // Registra handlers para validar/formatear precios (permite sólo números y separador decimal)
+            // Handlers para validar y formatear precios en los TextBox correspondientes
             try
             {
                 txtPrecioUnitario.PreviewTextInput += Decimal_PreviewTextInput;
@@ -84,10 +91,11 @@ namespace System_Market.Views
             }
             catch
             {
-                // Si controles no están presentes por alguna razón, no romper la ventana.
+                // Si los controles no existen, no se lanza excepción
             }
         }
 
+        // Permite abrir la ventana con un producto preseleccionado por código de barras
         public CompraWindow(string codigoInicial) : this()
         {
             if (!string.IsNullOrWhiteSpace(codigoInicial))
@@ -96,10 +104,12 @@ namespace System_Market.Views
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            // No enfocamos el textbox de código (está oculto). El gancho del escáner funciona igual.
+            // Se asegura que la ventana tenga el foco al cargar
             this.Focus();
         }
 
+        // Busca y selecciona un producto por código de barras al abrir la ventana.
+        // Si no existe, muestra un mensaje y limpia los campos.
         private void PreSeleccionarProductoPorCodigo(string codigo)
         {
             _ultimoCodigoEscaneado = codigo;
@@ -125,6 +135,7 @@ namespace System_Market.Views
             }
         }
 
+        // Carga proveedores y productos en los ComboBox de la ventana.
         private void CargarCombos()
         {
             var proveedores = _proveedorService.ObtenerTodos();
@@ -140,7 +151,8 @@ namespace System_Market.Views
             cmbProducto.SelectedValuePath = "Id";
         }
 
-        // Interceptor global de texto: decide si es escaneo rápido y lo captura
+        // Intercepta la entrada de texto para detectar escaneo rápido de código de barras.
+        // Si la secuencia es rápida, la bufferiza y evita que se escriba en el control.
         private void Global_PreviewTextInput(object? sender, TextCompositionEventArgs e)
         {
             if (string.IsNullOrEmpty(e.Text)) return;
@@ -152,9 +164,9 @@ namespace System_Market.Views
             bool bufferEmpty = _scanBuffer.Length == 0;
             bool isFast = delta < _scanThresholdMs;
 
-            // Si no hay buffer todavía: iniciarlo y recordar la fuente (no consumimos la primera tecla)
             if (bufferEmpty)
             {
+                // Inicia el buffer y guarda la fuente si es el primer carácter
                 _scanSourceTextBox = focused as TextBox;
                 _scanSourceOriginalLength = _scanSourceTextBox?.Text.Length ?? 0;
 
@@ -162,15 +174,12 @@ namespace System_Market.Views
                 _scanTimer.Stop();
                 _scanTimer.Start();
                 _lastKeystroke = now;
-
-                // No consumimos la primera tecla: permitimos escritura en el control (evita retrasos)
                 return;
             }
 
-            // Si ya existe buffer, sólo continuamos si la entrada es rápida (es un escaneo)
             if (!isFast)
             {
-                // Entrada lenta => probable tecleo manual. Abortar modo scan y no interferir.
+                // Si la entrada es lenta, se asume tecleo manual y se descarta el buffer
                 _scanBuffer.Clear();
                 _scanTimer.Stop();
                 _scanSourceTextBox = null;
@@ -178,7 +187,7 @@ namespace System_Market.Views
                 return;
             }
 
-            // Secuencia rápida: seguir bufferizando y consumir para que no vaya a otros controles.
+            // Si es una secuencia rápida, se considera escaneo y se consume el carácter
             _scanBuffer.Append(e.Text);
             _scanTimer.Stop();
             _scanTimer.Start();
@@ -186,12 +195,11 @@ namespace System_Market.Views
             e.Handled = true;
         }
 
-        // Interceptor global de teclas: si ENTER y hay buffer procesar de inmediato
+        // Intercepta la tecla Enter para procesar el buffer de escaneo inmediatamente.
         private void Global_PreviewKeyDown(object? sender, KeyEventArgs e)
         {
             if (e.Key == Key.Enter)
             {
-                // Si hay buffer acumulado, usarlo como código
                 if (_scanBuffer.Length > 0)
                 {
                     var code = _scanBuffer.ToString();
@@ -206,6 +214,8 @@ namespace System_Market.Views
             }
         }
 
+        // Timer para finalizar la captura de un escaneo rápido.
+        // Si el texto parece un código de barras, lo procesa.
         private void ScanTimer_Tick(object? sender, EventArgs e)
         {
             _scanTimer.Stop();
@@ -213,7 +223,7 @@ namespace System_Market.Views
             var bufferCode = _scanBuffer.ToString();
             _scanBuffer.Clear();
 
-            // Si antes del scan el primer carácter fue escrito en alguna TextBox, leer lo añadido
+            // Si el primer carácter fue escrito en un TextBox, lo recupera
             string prefixFromControl = string.Empty;
             try
             {
@@ -224,16 +234,11 @@ namespace System_Market.Views
                     {
                         prefixFromControl = current.Substring(_scanSourceOriginalLength);
                     }
-                    // no modificamos aún el TextBox; solo examinamos
                 }
             }
-            catch
-            {
-                // ignore
-            }
+            catch { }
             finally
             {
-                // reset source tracking
                 _scanSourceTextBox = null;
                 _scanSourceOriginalLength = 0;
             }
@@ -241,10 +246,9 @@ namespace System_Market.Views
             var code = (prefixFromControl + bufferCode).Trim();
             if (string.IsNullOrWhiteSpace(code)) return;
 
-            // Sólo procesar si parece un barcode para evitar interferir con escritura normal
+            // Solo procesa si parece un código de barras válido
             if (IsLikelyBarcode(code))
             {
-                // Si había texto extra en la TextBox origen, eliminarlo (consumido por el scan).
                 try
                 {
                     if (!string.IsNullOrEmpty(prefixFromControl) && _scanSourceTextBox is not null)
@@ -257,11 +261,11 @@ namespace System_Market.Views
                         }
                     }
                 }
-                catch { /* ignore */ }
+                catch { }
 
                 HandleScannedCode(code);
 
-                // además limpiar textbox editable si existe
+                // Limpia el TextBox editable del ComboBox si existe
                 try
                 {
                     if (cmbProducto.Template.FindName("PART_EditableTextBox", cmbProducto) is TextBox tb)
@@ -271,43 +275,38 @@ namespace System_Market.Views
                 }
                 catch { }
             }
-            else
-            {
-                // No es barcode: no hacemos nada (dejamos la entrada manual intacta)
-            }
         }
 
-        // Mejora de la heurística: exigir longitud mínima para evitar falsos positivos
+        // Heurística para determinar si un texto es probablemente un código de barras.
         private static bool IsLikelyBarcode(string code)
         {
             code = code.Trim();
-            if (code.Length < 6) return false; // barcode típicos son más largos
+            if (code.Length < 6) return false;
             int digits = code.Count(char.IsDigit);
-            // exigir al menos la mitad de caracteres como dígitos (ajusta si tu código es alfanumérico)
             return digits >= Math.Max(1, code.Length / 2);
         }
 
+        // Asocia eventos al TextBox editable del ComboBox de productos.
         private void cmbProducto_Loaded(object sender, RoutedEventArgs e)
         {
-            // si el template tiene el EditableTextBox
             if (cmbProducto.Template.FindName("PART_EditableTextBox", cmbProducto) is TextBox tb)
             {
                 tb.TextChanged += CmbProducto_TextChanged;
-                tb.KeyDown += EditableTextBox_KeyDown; // maneja Enter (escáner)
-                tb.PreviewTextInput += Editable_PreviewTextInput; // captura chars rápidos (escáner) para combo
+                tb.KeyDown += EditableTextBox_KeyDown;
+                tb.PreviewTextInput += Editable_PreviewTextInput;
             }
         }
 
+        // Bufferiza caracteres para escaneo en el ComboBox editable.
         private void Editable_PreviewTextInput(object? sender, TextCompositionEventArgs e)
         {
-            // Si el editable del combo recibe texto, bufferizamos y reiniciamos timer.
             if (string.IsNullOrEmpty(e.Text)) return;
             _scanBuffer.Append(e.Text);
             _scanTimer.Stop();
             _scanTimer.Start();
-            // No marcamos Handled aquí: permitimos que el combo muestre el texto también.
         }
 
+        // Filtra la lista de productos según el texto ingresado en el ComboBox.
         private void CmbProducto_TextChanged(object? sender, TextChangedEventArgs e)
         {
             if (_vistaProductos == null) return;
@@ -331,6 +330,8 @@ namespace System_Market.Views
             cmbProducto.IsDropDownOpen = true;
         }
 
+        // Agrega un producto y su cantidad a la lista de detalles de la compra.
+        // Si el producto ya existe con el mismo precio, suma la cantidad.
         private void btnAgregarDetalle_Click(object sender, RoutedEventArgs e)
         {
             if (cmbProducto.SelectedValue == null)
@@ -359,12 +360,13 @@ namespace System_Market.Views
             var existente = _detalles.FirstOrDefault(d => d.ProductoId == productoId && d.PrecioUnitario == precio);
             if (existente != null)
             {
+                // Si ya existe el producto con ese precio, solo suma la cantidad
                 existente.Cantidad += cantidad;
-                // CORRECCIÓN: usar existente.PrecioUnitario en lugar de una variable inexistente
                 existente.Subtotal = existente.Cantidad * existente.PrecioUnitario;
             }
             else
             {
+                // Si es nuevo, lo agrega a la lista de detalles
                 _detalles.Add(new DetalleCompra
                 {
                     ProductoId = productoId,
@@ -378,7 +380,7 @@ namespace System_Market.Views
             RefrescarDetalle();
             CalcularTotal();
 
-            // Limpiar UI como antes
+            // Limpia los campos de la UI para el siguiente ingreso
             cmbProducto.SelectedIndex = -1;
             cmbProducto.Text = string.Empty;
             lblProductoNombre.Text = "";
@@ -386,25 +388,19 @@ namespace System_Market.Views
             txtPrecioUnitario.Clear();
             OcultarEditorPrecios();
 
-            // --- NUEVO: limpiar estado del buffer y devolver foco al combo editable ---
+            // Limpia el buffer de escaneo y devuelve el foco al ComboBox editable
             try
             {
                 _scanBuffer.Clear();
                 _scanTimer.Stop();
                 _scanSourceTextBox = null;
                 _scanSourceOriginalLength = 0;
-                // Reiniciar marca de tiempo para evitar lecturas rápidas residuales
                 _lastKeystroke = DateTime.MinValue;
 
-                // Intentar fijar foco de forma síncrona y asegurar con BeginInvoke
                 if (cmbProducto.Template.FindName("PART_EditableTextBox", cmbProducto) is TextBox editableTb)
                 {
-                    // focus inmediato
                     editableTb.Focus();
-                    // limpiar visualmente (no obligatorio)
                     editableTb.Clear();
-
-                    // Asegurar con un invoke diferido que el control está listo para el siguiente scan
                     Dispatcher.BeginInvoke(new Action(() =>
                     {
                         try
@@ -416,24 +412,25 @@ namespace System_Market.Views
                     }), System.Windows.Threading.DispatcherPriority.Input);
                 }
             }
-            catch
-            {
-                // no romper la UI si algo falla aquí
-            }
+            catch { }
         }
 
+        // Refresca la visualización de los detalles de la compra en el DataGrid.
         private void RefrescarDetalle()
         {
             dgDetalles.ItemsSource = null;
             dgDetalles.ItemsSource = _detalles;
         }
 
+        // Calcula el total de la compra sumando los subtotales de los detalles.
         private void CalcularTotal()
         {
             decimal total = _detalles.Sum(d => d.Subtotal);
             txtTotal.Text = CurrencyService.FormatSoles(total, "N2");
         }
 
+        // Valida y registra la compra en la base de datos.
+        // Muestra un resumen para confirmación antes de registrar.
         private void btnRegistrar_Click(object sender, RoutedEventArgs e)
         {
             if (cmbProveedor.SelectedValue == null)
@@ -448,14 +445,13 @@ namespace System_Market.Views
                 return;
             }
 
-            // Usar el usuario actualmente logueado (sesión global)
             if (System_Market.Models.SesionActual.Usuario == null)
             {
                 MessageBox.Show("No hay usuario logueado. Vuelva a iniciar sesión.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
-            // Construir resumen para confirmación previa
+            // Muestra un resumen para confirmación antes de registrar
             var sb = new StringBuilder();
             sb.AppendLine("Confirme la compra con los siguientes productos:");
             sb.AppendLine();
@@ -509,12 +505,14 @@ namespace System_Market.Views
 
         private void btnCerrar_Click(object sender, RoutedEventArgs e) => Close();
 
+        // Abre la ventana de historial de compras.
         private void btnHistorialCompras_Click(object sender, RoutedEventArgs e)
         {
             var historial = new HistorialComprasWindow { Owner = this };
             historial.ShowDialog();
         }
 
+        // Cuando se selecciona un producto, actualiza los campos relacionados.
         private void cmbProducto_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             var producto = cmbProducto.SelectedItem as Producto;
@@ -537,6 +535,7 @@ namespace System_Market.Views
 
         // btnProductoNuevo_Click eliminado
 
+        // Muestra el panel para editar precios de compra y venta del producto seleccionado.
         private void BtnEditarPrecioUnitario_Click(object sender, RoutedEventArgs e)
         {
             if (cmbProducto.SelectedItem is not Producto prodSel)
@@ -563,6 +562,7 @@ namespace System_Market.Views
             panelEditorPrecios.Visibility = Visibility.Visible;
         }
 
+        // Guarda los nuevos precios de compra y venta del producto seleccionado.
         private void BtnGuardarPrecios_Click(object sender, RoutedEventArgs e)
         {
             if (cmbProducto.SelectedItem is not Producto prodSel)
@@ -606,11 +606,13 @@ namespace System_Market.Views
 
         private void OcultarEditorPrecios() => panelEditorPrecios.Visibility = Visibility.Collapsed;
 
+        // Intenta convertir un texto a decimal usando el servicio de moneda.
         private static bool TryParsePrecio(string? texto, out decimal valor)
         {
             return CurrencyService.TryParseSoles(texto, out valor);
         }
 
+        // Valida que solo se ingresen números enteros en la cantidad.
         private void OnCantidadPreviewTextInput(object sender, TextCompositionEventArgs e)
         {
             if ((DateTime.UtcNow - _lastScanHandled).TotalMilliseconds < 250)
@@ -621,6 +623,7 @@ namespace System_Market.Views
             e.Handled = !RegexEntero.IsMatch(e.Text);
         }
 
+        // Evita la edición de cantidad inmediatamente después de un escaneo.
         private void OnCantidadPreviewKeyDown(object sender, KeyEventArgs e)
         {
             if ((DateTime.UtcNow - _lastScanHandled).TotalMilliseconds < 250)
@@ -630,9 +633,11 @@ namespace System_Market.Views
             }
         }
 
+        // Valida que solo se ingresen números decimales en los campos de precio.
         private void Decimal_PreviewTextInput(object sender, TextCompositionEventArgs e)
             => e.Handled = !RegexDecimal.IsMatch(e.Text);
 
+        // Formatea el valor del TextBox de precio al perder el foco.
         private void Decimal_LostFocus(object sender, RoutedEventArgs e)
         {
             if (sender is not TextBox tb) return;
@@ -642,6 +647,7 @@ namespace System_Market.Views
                 tb.Text = CurrencyService.FormatSoles(v, "N2");
         }
 
+        // Valida el pegado de texto en los campos de precio.
         private void Precio_PasteHandler(object sender, DataObjectPastingEventArgs e)
         {
             if (!e.SourceDataObject.GetDataPresent(DataFormats.UnicodeText))
@@ -654,6 +660,7 @@ namespace System_Market.Views
                 e.CancelCommand();
         }
 
+        // Procesa un código escaneado: selecciona el producto y actualiza la UI.
         public void HandleScannedCode(string codigo)
         {
             _ultimoCodigoEscaneado = codigo;
@@ -692,8 +699,10 @@ namespace System_Market.Views
             _lastScanHandled = DateTime.UtcNow;
         }
 
+        // Muestra un mensaje tipo Snackbar en la parte inferior de la ventana.
         private void MostrarToast(string mensaje) => _snackbarQueue.Enqueue(mensaje);
 
+        // Selecciona un producto por su Id y actualiza los campos relacionados.
         private void SeleccionarProductoPorId(int productoId)
         {
             var prod = _productos.FirstOrDefault(p => p.Id == productoId);
@@ -710,11 +719,13 @@ namespace System_Market.Views
             }
         }
 
+        // Agrega un producto de forma segura (ignora excepciones).
         private void _producto_service_agregar_safe(Producto p)
         {
             try { _producto_service.AgregarProducto(p); } catch { }
         }
 
+        // Refresca la lista de productos y proveedores, y actualiza la UI.
         private void btnRefrescar_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -736,6 +747,7 @@ namespace System_Market.Views
             }
         }
 
+        // Elimina un detalle de la lista de compra tras confirmación del usuario.
         private void EliminarDetalle_Click(object sender, RoutedEventArgs e)
         {
             if (sender is FrameworkElement fe && fe.DataContext is DetalleCompra detalle)
@@ -750,6 +762,7 @@ namespace System_Market.Views
             }
         }
 
+        // Permite procesar un código ingresado manualmente en el ComboBox editable al presionar Enter.
         private void EditableTextBox_KeyDown(object? sender, KeyEventArgs e)
         {
             if (e.Key != Key.Enter) return;
@@ -767,6 +780,7 @@ namespace System_Market.Views
             e.Handled = true;
         }
 
+        // Permite procesar un código ingresado en el TextBox de código de compra al presionar Enter.
         private void TxtCodigoCompra_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key != Key.Enter) return;

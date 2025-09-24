@@ -18,7 +18,7 @@
             <GradientStop Color="#26D0CE" Offset="1"/>
         </LinearGradientBrush>
 
-        <!-- Paleta local (se conservan por si se usan en otros elementos) -->
+        <!-- Paleta local de colores para tarjetas, acentos y filas -->
         <SolidColorBrush x:Key="CardBg" Color="#1D2734"/>
         <SolidColorBrush x:Key="CardBgLight" Color="#232B3E"/>
         <SolidColorBrush x:Key="AccentTeal" Color="#19C1D3"/>
@@ -26,7 +26,7 @@
         <SolidColorBrush x:Key="RowStrip1" Color="#0CFFFFFF"/>
         <SolidColorBrush x:Key="RowStrip2" Color="#16000000"/>
 
-        <!-- Botones estilo (coherente con MainWindow) -->
+        <!-- Estilos de botones principales y variantes -->
         <Style x:Key="PrimaryButton" TargetType="Button">
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="Background" Value="#7B1FA2"/>
@@ -49,6 +49,7 @@
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
+                            <!-- Animación de escala al pasar el mouse -->
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Trigger.EnterActions>
                                     <BeginStoryboard>
@@ -75,6 +76,7 @@
                                     </BeginStoryboard>
                                 </Trigger.ExitActions>
                             </Trigger>
+                            <!-- Efecto al presionar -->
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="Bd" Property="RenderTransform">
                                     <Setter.Value>
@@ -82,14 +84,10 @@
                                     </Setter.Value>
                                 </Setter>
                             </Trigger>
-
-                            <!-- NUEVO: aspecto cuando el botón está deshabilitado -->
+                            <!-- Estado deshabilitado -->
                             <Trigger Property="IsEnabled" Value="False">
-                                <!-- reduce opacidad del borde (se ve 'apagado') -->
                                 <Setter TargetName="Bd" Property="Opacity" Value="0.55"/>
-                                <!-- quitar sombra para reforzar estado deshabilitado -->
                                 <Setter TargetName="Bd" Property="Effect" Value="{x:Null}"/>
-                                <!-- mostrar cursor por defecto -->
                                 <Setter Property="Cursor" Value="Arrow"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -98,6 +96,7 @@
             </Setter>
         </Style>
 
+        <!-- Variantes de botón: acento, peligro, neutro -->
         <Style x:Key="AccentButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
             <Setter Property="Background" Value="#0288D1"/>
         </Style>
@@ -119,13 +118,13 @@
             <Setter Property="MinHeight" Value="44"/>
         </Style>
 
-        <!-- Estilo para botones pequeños tipo 'Buscar' -->
+        <!-- Botón de búsqueda pequeño -->
         <Style x:Key="SearchButton" TargetType="Button" BasedOn="{StaticResource AccentButton}">
             <Setter Property="MinWidth" Value="120"/>
             <Setter Property="MinHeight" Value="44"/>
         </Style>
 
-        <!-- DataGrid look: encabezados y filas -->
+        <!-- Estilo DataGrid para visualización de productos -->
         <Style TargetType="DataGrid" x:Key="NiceDataGrid">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="RowBackground" Value="#0F000000"/>
@@ -137,6 +136,7 @@
             <Setter Property="FontSize" Value="14"/>
         </Style>
 
+        <!-- Encabezados de columnas del DataGrid -->
         <Style TargetType="DataGridColumnHeader">
             <Setter Property="Foreground" Value="{StaticResource AccentTeal}"/>
             <Setter Property="Background" Value="Transparent"/>
@@ -146,7 +146,7 @@
         </Style>
     </Window.Resources>
 
-    <!-- Fondo del Window: ya está aplicado en Window.Background -->
+    <!-- Contenido principal de la ventana de productos -->
     <Grid Background="Transparent" Margin="0">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -155,7 +155,7 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Encabezado -->
+        <!-- Encabezado de la sección -->
         <StackPanel Grid.Row="0" Margin="8,8,8,12">
             <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE719;" FontSize="20"
                        Foreground="{StaticResource AccentTeal}" Margin="0,0,6,0"/>
@@ -163,7 +163,7 @@
                        Foreground="{StaticResource HeaderText}"/>
         </StackPanel>
 
-        <!-- Filtros (tarjeta oscura) -->
+        <!-- Filtros de búsqueda -->
         <Border Grid.Row="1" CornerRadius="12" Background="{StaticResource CardBgLight}" Padding="14" Margin="10,0,10,12">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -195,7 +195,7 @@
             </Grid>
         </Border>
 
-        <!-- Grilla de productos en tarjeta más grande -->
+        <!-- Grilla de productos -->
         <Border Grid.Row="2" CornerRadius="12" Background="{StaticResource CardBg}" Padding="12" Margin="10,0,10,12" >
             <Grid>
                 <Grid.RowDefinitions>
@@ -203,7 +203,7 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <!-- Título dentro de la tarjeta -->
+                <!-- Título de la grilla -->
                 <TextBlock Text="Productos" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource HeaderText}" Margin="6,0,0,12"/>
 
                 <DataGrid x:Name="dgProductos"
@@ -233,21 +233,21 @@
             </Grid>
         </Border>
 
-        <!-- Acciones (botones) y paginación -->
+        <!-- Acciones y paginación -->
         <Grid Grid.Row="3" Margin="10,6,10,26">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Paginación a la izquierda -->
+            <!-- Paginación -->
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Grid.Column="0">
                 <Button x:Name="btnPrevPage" Style="{StaticResource PageNavButton}" Click="BtnPrevPage_Click" ToolTip="Página anterior">‹</Button>
                 <TextBlock x:Name="txtPageInfo" VerticalAlignment="Center" Foreground="White" Margin="10,0,10,0" FontWeight="SemiBold"/>
                 <Button x:Name="btnNextPage" Style="{StaticResource PageNavButton}" Click="BtnNextPage_Click" ToolTip="Página siguiente">›</Button>
             </StackPanel>
 
-            <!-- Botones acción a la derecha -->
+            <!-- Botones de acción -->
             <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                 <Button Style="{StaticResource PrimaryButton}" Click="BtnAgregar_Click" Height="52" Width="120">
                     <StackPanel Orientation="Horizontal">

@@ -10,21 +10,23 @@ using System_Market.Views;
 
 namespace System_Market;
 
+// Clase principal de la aplicación WPF. Inicializa la base de datos, configura la cultura y gestiona el ciclo de vida de login y ventana principal.
 public partial class App : Application
 {
     private bool _loginShown;
 
+    // Se ejecuta al iniciar la aplicación
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
 
-        // Inicializar DB una sola vez
+        // Inicializar la base de datos solo una vez
         DatabaseInitializer.InitializeDatabase();
 
-        // Incrementar contador de ejecuciones
+        // Incrementar contador de ejecuciones (para estadísticas o control de uso)
         ExecutionCounterService.IncrementExecutionCount();
 
-        // Cultura
+        // Configuración de cultura regional (Perú, separador decimal coma, símbolo S/)
         var ci = new CultureInfo("es-PE");
         ci.NumberFormat.CurrencySymbol = "S/";
         ci.NumberFormat.NumberDecimalSeparator = ",";
@@ -38,7 +40,7 @@ public partial class App : Application
             new FrameworkPropertyMetadata(
                 System.Windows.Markup.XmlLanguage.GetLanguage(ci.IetfLanguageTag)));
 
-        // Evita que la app se cierre cuando se cierra el login
+        // Evita que la app se cierre al cerrar el login (se controla explícitamente)
         this.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
         // Mostrar login modal solo una vez
@@ -52,30 +54,30 @@ public partial class App : Application
 
             if (result == true)
             {
-                // Asegurarnos de que no quede ninguna LoginWindow abierta
+                // Cerrar cualquier otra ventana de login que haya quedado abierta
                 foreach (var w in Application.Current.Windows.OfType<LoginWindow>().ToList())
                 {
                     try { if (w != login) w.Close(); } catch { }
                 }
 
-                // Mostrar MainWindow
+                // Mostrar la ventana principal, pasando el usuario autenticado
                 var main = new MainWindow(login.UsuarioLogueado);
                 this.MainWindow = main;
                 main.Show();
 
-                // Iniciar servicios desde Loaded del MainWindow (ya lo haces ahí)
+                // Cambiar el modo de cierre: ahora la app se cierra al cerrar la ventana principal
                 this.ShutdownMode = ShutdownMode.OnMainWindowClose;
             }
             else
             {
+                // Si el login fue cancelado o fallido, cerrar la aplicación
                 Shutdown();
             }
         }
         else
         {
-            // si por alguna razón se llega aquí, evita abrir más logins
+            // Seguridad: si por alguna razón se reentra, evitar abrir más logins
             Shutdown();
         }
     }
 }
-

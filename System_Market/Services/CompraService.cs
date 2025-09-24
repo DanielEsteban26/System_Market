@@ -8,15 +8,20 @@ using System_Market.Models;
 
 namespace System_Market.Services
 {
+    // Servicio encargado de gestionar las operaciones de compras en la base de datos.
+    // Permite registrar, actualizar, anular y consultar compras y sus detalles.
     public class CompraService
     {
+        // Cadena de conexión a la base de datos SQLite.
         private readonly string _connectionString;
 
+        // Constructor que recibe la cadena de conexión.
         public CompraService(string connectionString)
         {
             _connectionString = connectionString;
         }
 
+        // Obtiene todas las compras registradas, incluyendo el nombre del usuario y proveedor.
         public List<Compra> ObtenerTodas()
         {
             var compras = new List<Compra>();
@@ -32,6 +37,7 @@ namespace System_Market.Services
             using var reader = cmd.ExecuteReader();
             while (reader.Read())
             {
+                // Por cada compra encontrada, crea una instancia de Compra y la agrega a la lista.
                 compras.Add(new Compra
                 {
                     Id = reader.GetInt32(0),
@@ -48,9 +54,8 @@ namespace System_Market.Services
             return compras;
         }
 
-        /// <summary>
-        /// Registra la compra, sus detalles y actualiza el stock en una sola transacción.
-        /// </summary>
+        // Registra una compra con sus detalles y actualiza el stock de los productos en una sola transacción.
+        // Devuelve el Id de la compra registrada.
         public int AgregarCompraConDetalles(Compra compra, List<DetalleCompra> detalles)
         {
             using var connection = new SQLiteConnection(_connectionString);
@@ -59,7 +64,7 @@ namespace System_Market.Services
 
             try
             {
-                // Calcular total
+                // Calcula el total de la compra sumando los subtotales de cada detalle.
                 compra.Total = 0;
                 foreach (var d in detalles)
                 {
@@ -67,7 +72,7 @@ namespace System_Market.Services
                     compra.Total += d.Subtotal;
                 }
 
-                // Insertar la compra
+                // Inserta la compra principal y obtiene el Id generado.
                 string queryCompra = @"INSERT INTO Compras (UsuarioId, ProveedorId, Fecha, Total, Estado, MotivoAnulacion)
                                VALUES (@UsuarioId, @ProveedorId, @Fecha, @Total, @Estado, @MotivoAnulacion);
                                SELECT last_insert_rowid();";
@@ -80,7 +85,7 @@ namespace System_Market.Services
                 cmdCompra.Parameters.AddWithValue("@MotivoAnulacion", compra.MotivoAnulacion ?? "");
                 int compraId = Convert.ToInt32(cmdCompra.ExecuteScalar());
 
-                // Insertar detalles + actualizar stock
+                // Inserta cada detalle de la compra y actualiza el stock del producto correspondiente.
                 foreach (var detalle in detalles)
                 {
                     string queryDetalle = @"INSERT INTO DetalleCompras (CompraId, ProductoId, Cantidad, PrecioUnitario, Subtotal)
@@ -93,7 +98,7 @@ namespace System_Market.Services
                     cmdDetalle.Parameters.AddWithValue("@Subtotal", detalle.Subtotal);
                     cmdDetalle.ExecuteNonQuery();
 
-                    // Aumentar stock
+                    // Aumenta el stock del producto comprado.
                     string queryStock = @"UPDATE Productos SET Stock = Stock + @Cantidad WHERE Id = @ProductoId";
                     using var cmdStock = new SQLiteCommand(queryStock, connection, transaction);
                     cmdStock.Parameters.AddWithValue("@Cantidad", detalle.Cantidad);
@@ -106,12 +111,13 @@ namespace System_Market.Services
             }
             catch
             {
+                // Si ocurre un error, revierte toda la transacción.
                 transaction.Rollback();
                 throw;
             }
         }
 
-
+        // Actualiza los datos de una compra existente en la base de datos.
         public void ActualizarCompra(Compra compra)
         {
             using var connection = new SQLiteConnection(_connectionString);
@@ -135,6 +141,7 @@ namespace System_Market.Services
             cmd.ExecuteNonQuery();
         }
 
+        // Obtiene todos los detalles de una compra específica, incluyendo el nombre del producto.
         public List<DetalleCompra> ObtenerDetallesPorCompra(int compraId)
         {
             var detalles = new List<DetalleCompra>();
@@ -165,10 +172,8 @@ namespace System_Market.Services
             return detalles;
         }
 
-
-        /// <summary>
-        /// Anula la compra y revierte el stock de los productos.
-        /// </summary>
+        // Anula una compra y revierte el stock de los productos involucrados.
+        // Cambia el estado de la compra a "Anulada" y descuenta del stock las cantidades compradas.
         public void AnularCompra(int compraId, string motivo)
         {
             using var connection = new SQLiteConnection(_connectionString);
@@ -177,14 +182,14 @@ namespace System_Market.Services
 
             try
             {
-                // Cambiar estado y motivo
+                // Cambia el estado de la compra a "Anulada" y guarda el motivo.
                 string query = @"UPDATE Compras SET Estado = 'Anulada', MotivoAnulacion = @Motivo WHERE Id = @Id";
                 using var cmd = new SQLiteCommand(query, connection, transaction);
                 cmd.Parameters.AddWithValue("@Motivo", motivo);
                 cmd.Parameters.AddWithValue("@Id", compraId);
                 cmd.ExecuteNonQuery();
 
-                // Obtener detalles de la compra
+                // Obtiene los detalles de la compra anulada.
                 string queryDetalles = "SELECT ProductoId, Cantidad FROM DetalleCompras WHERE CompraId = @CompraId";
                 using var cmdDetalles = new SQLiteCommand(queryDetalles, connection, transaction);
                 cmdDetalles.Parameters.AddWithValue("@CompraId", compraId);
@@ -195,7 +200,7 @@ namespace System_Market.Services
                     detalles.Add((reader.GetInt32(0), reader.GetInt32(1)));
                 }
 
-                // Revertir stock
+                // Por cada producto, descuenta del stock la cantidad que había sido sumada al comprar.
                 foreach (var d in detalles)
                 {
                     string queryStock = @"UPDATE Productos SET Stock = Stock - @Cantidad WHERE Id = @ProductoId";
@@ -209,6 +214,7 @@ namespace System_Market.Services
             }
             catch
             {
+                // Si ocurre un error, revierte toda la transacción.
                 transaction.Rollback();
                 throw;
             }

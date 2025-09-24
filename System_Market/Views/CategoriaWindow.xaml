@@ -11,15 +11,14 @@
         FontFamily="Segoe UI"
         UseLayoutRounding="True"
         SnapsToDevicePixels="True">
-
     <Window.Resources>
-        <!-- Fondo local -->
+        <!-- Fondo degradado principal de la ventana -->
         <LinearGradientBrush x:Key="MainBgLocal" StartPoint="0,0" EndPoint="1,1">
             <GradientStop Color="#0B2E3A" Offset="0"/>
             <GradientStop Color="#117A8A" Offset="1"/>
         </LinearGradientBrush>
 
-        <!-- Paleta y métricas -->
+        <!-- Paleta de colores y métricas reutilizables -->
         <SolidColorBrush x:Key="CardBg" Color="#0D1B22"/>
         <SolidColorBrush x:Key="CardBgLight" Color="#12242C"/>
         <SolidColorBrush x:Key="AccentTeal" Color="#19C1D3"/>
@@ -32,7 +31,7 @@
         <Thickness x:Key="CtlPadding">14,6</Thickness>
         <sys:Double x:Key="CtlFontSize">13</sys:Double>
 
-        <!-- Pill buttons -->
+        <!-- Estilo base para botones tipo píldora -->
         <Style x:Key="PillButtonBase" TargetType="Button">
             <Setter Property="Foreground" Value="{StaticResource HeaderText}"/>
             <Setter Property="Padding" Value="12,6"/>
@@ -49,12 +48,16 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Bd" Property="RenderTransform">
-                                    <Setter.Value><ScaleTransform ScaleX="1.03" ScaleY="1.03"/></Setter.Value>
+                                    <Setter.Value>
+                                        <ScaleTransform ScaleX="1.03" ScaleY="1.03"/>
+                                    </Setter.Value>
                                 </Setter>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="Bd" Property="RenderTransform">
-                                    <Setter.Value><ScaleTransform ScaleX="0.98" ScaleY="0.98"/></Setter.Value>
+                                    <Setter.Value>
+                                        <ScaleTransform ScaleX="0.98" ScaleY="0.98"/>
+                                    </Setter.Value>
                                 </Setter>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
@@ -66,17 +69,20 @@
             </Setter>
         </Style>
 
+        <!-- Botón principal (Agregar) -->
         <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource PillButtonBase}">
             <Setter Property="Background" Value="{StaticResource AccentTeal}"/>
         </Style>
+        <!-- Botón secundario (Actualizar) -->
         <Style x:Key="AccentButton" TargetType="Button" BasedOn="{StaticResource PillButtonBase}">
             <Setter Property="Background" Value="{StaticResource AccentBlue}"/>
         </Style>
+        <!-- Botón de peligro (Eliminar) -->
         <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource PillButtonBase}">
             <Setter Property="Background" Value="{StaticResource DangerColor}"/>
         </Style>
 
-        <!-- Inputs -->
+        <!-- Estilo para TextBox oscuro, usado en el input de categoría -->
         <Style x:Key="DarkTextBox" TargetType="TextBox">
             <Setter Property="Height" Value="{StaticResource CtlHeight}"/>
             <Setter Property="Background" Value="{StaticResource CardBg}"/>
@@ -98,7 +104,9 @@
                             <Trigger Property="IsKeyboardFocused" Value="True">
                                 <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentTeal}"/>
                                 <Setter TargetName="Bd" Property="Effect">
-                                    <Setter.Value><DropShadowEffect Color="#22000000" BlurRadius="6" ShadowDepth="2"/></Setter.Value>
+                                    <Setter.Value>
+                                        <DropShadowEffect Color="#22000000" BlurRadius="6" ShadowDepth="2"/>
+                                    </Setter.Value>
                                 </Setter>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -107,7 +115,7 @@
             </Setter>
         </Style>
 
-        <!-- DataGrid local styles originales (se conservan por si se usan en otras partes) -->
+        <!-- Estilos para DataGrid y encabezados -->
         <Style x:Key="GridHeaderStyle" TargetType="DataGridColumnHeader">
             <Setter Property="Foreground" Value="{StaticResource AccentTeal}"/>
             <Setter Property="Background" Value="Transparent"/>
@@ -138,7 +146,7 @@
             <Setter Property="MinHeight" Value="36"/>
         </Style>
 
-        <!-- Estilos copiados de ProductoWindow para lograr el mismo aspecto y selección -->
+        <!-- Estilo visual para DataGrid -->
         <Style x:Key="NiceDataGrid" TargetType="DataGrid">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="RowBackground" Value="#0F000000"/>
@@ -167,7 +175,7 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Header -->
+        <!-- Encabezado con icono y título -->
         <DockPanel Grid.Row="0" Margin="0,0,0,12">
             <StackPanel Orientation="Horizontal">
                 <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8D1;" FontSize="20" Foreground="{StaticResource AccentTeal}" Margin="0,0,8,0"/>
@@ -178,7 +186,7 @@
             </StackPanel>
         </DockPanel>
 
-        <!-- Input card -->
+        <!-- Tarjeta de entrada para agregar/actualizar categorías -->
         <Border Grid.Row="1" Background="{StaticResource CardBgLight}" CornerRadius="10" Padding="14" Margin="0,0,0,12" materialDesign:ShadowAssist.ShadowDepth="Depth1">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -187,6 +195,7 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
+                <!-- Input para nombre de la categoría -->
                 <StackPanel Grid.Column="0" Margin="0,0,12,0">
                     <TextBlock Text="Nombre de la categoría" Foreground="{StaticResource AccentTeal}" FontSize="12" Margin="2,0,0,6"/>
                     <TextBox x:Name="txtNombreCategoria"
@@ -196,6 +205,7 @@
                              ToolTip="Escribe el nombre y pulsa Agregar o Actualizar"/>
                 </StackPanel>
 
+                <!-- Botón Agregar: solo habilitado si hay texto -->
                 <Button Grid.Column="1" x:Name="btnAgregar" Padding="{StaticResource CtlPadding}" MinHeight="{StaticResource CtlHeight}" Click="BtnAgregar_Click" Background="{StaticResource AccentTeal}" Foreground="{StaticResource HeaderText}" Margin="0,22,8,0">
                     <Button.Style>
                         <Style TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
@@ -213,6 +223,7 @@
                     </StackPanel>
                 </Button>
 
+                <!-- Botón Actualizar: solo habilitado si hay selección y texto -->
                 <Button Grid.Column="2" x:Name="btnActualizar" Padding="{StaticResource CtlPadding}" MinHeight="{StaticResource CtlHeight}" Click="BtnActualizar_Click" Background="{StaticResource AccentBlue}" Foreground="{StaticResource HeaderText}" Margin="0,22,0,0">
                     <Button.Style>
                         <Style TargetType="Button" BasedOn="{StaticResource AccentButton}">
@@ -235,7 +246,7 @@
             </Grid>
         </Border>
 
-        <!-- Lista -->
+        <!-- Lista de categorías en DataGrid -->
         <Border Grid.Row="2" Background="{StaticResource CardBg}" CornerRadius="10" Padding="12" materialDesign:ShadowAssist.ShadowDepth="Depth2" Margin="0,0,0,12">
             <Grid>
                 <Grid.RowDefinitions>
@@ -272,10 +283,11 @@
             </Grid>
         </Border>
 
-        <!-- Footer -->
+        <!-- Footer: consejo y botón Eliminar -->
         <DockPanel Grid.Row="3">
             <TextBlock Text="Consejo: selecciona una fila para editarla, o escribe y pulsa Agregar." Foreground="{StaticResource MutedText}" FontSize="11" VerticalAlignment="Center"/>
             <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                <!-- Botón Eliminar: solo habilitado si hay selección -->
                 <Button x:Name="btnEliminar" Padding="12,8" Click="BtnEliminar_Click" Background="{StaticResource DangerColor}" Foreground="{StaticResource HeaderText}" Width="129">
                     <Button.Style>
                         <Style TargetType="{x:Type Button}" BasedOn="{StaticResource DangerButton}">

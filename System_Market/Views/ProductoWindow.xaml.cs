@@ -10,30 +10,30 @@ using System_Market.Services;
 
 namespace System_Market.Views
 {
-    /// <summary>
-    /// Lógica de interacción para ProductoWindow.xaml
-    /// </summary>
+    // Ventana principal para la gestión de productos.
+    // Permite buscar, agregar, editar, eliminar y paginar productos.
+    // Incluye integración con escáner de código de barras y protección contra entradas residuales.
     public partial class ProductoWindow : Window
     {
+        // Servicios para acceder a productos, categorías y proveedores
         private readonly ProductoService _productoService;
         private readonly CategoriaService _categoriaService;
         private readonly ProveedorService _proveedorService;
+
+        // Producto actualmente seleccionado en la grilla
         private Producto _productoSeleccionado;
 
-        // --- NUEVO CÓDIGO PARA PAGINACIÓN ---
+        // Variables para paginación de la grilla de productos
         private List<Producto> _allProductos = new();
         private int _currentPage = 1;
-        private readonly int _pageSize = 7; // <-- filas por página
+        private readonly int _pageSize = 7; // Cantidad de filas por página
         private int _totalPages = 1;
-        // --- FIN NUEVO CÓDIGO ---
 
-        // --- EXISTENTE ---
+        // Variables para manejo de escáner y supresión de entradas residuales
         private DateTime _lastScanTime = DateTime.MinValue;
         private string? _lastScanCode;
         private bool _ventanaEdicionAbierta;
         private DateTime _ignoreScannerUntil = DateTime.MinValue;
-
-        // --- NUEVO: supresión temporal de input para evitar "residuos" del scanner ---
         private bool _suppressScannerInput;
         private readonly DispatcherTimer _suppressTimer;
 
@@ -43,9 +43,9 @@ namespace System_Market.Views
             string connectionString = DatabaseInitializer.GetConnectionString();
             _productoService = new ProductoService(connectionString);
             _categoriaService = new CategoriaService(connectionString);
-            _proveedorService = new ProveedorService(connectionString); // mantener como estaba en tu proyecto
+            _proveedorService = new ProveedorService(connectionString);
 
-            // Inicializar timer para limpiar flag de supresión
+            // Timer para limpiar el flag de supresión de input tras escaneo
             _suppressTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
             _suppressTimer.Tick += (s, e) =>
             {
@@ -53,33 +53,30 @@ namespace System_Market.Views
                 _suppressTimer.Stop();
             };
 
-            // Interceptar input en el TextBox para bloquear teclas residuales
+            // Bloquea teclas residuales en el TextBox de búsqueda tras escaneo
             txtBuscar.PreviewTextInput += TxtBuscar_PreviewTextInput;
             txtBuscar.PreviewKeyDown += TxtBuscar_PreviewKeyDown;
 
             CargarProductos();
         }
 
+        // Bloquea la entrada de texto si está activo el flag de supresión
         private void TxtBuscar_PreviewTextInput(object? sender, TextCompositionEventArgs e)
         {
             if (_suppressScannerInput)
-            {
                 e.Handled = true;
-            }
         }
 
+        // Bloquea cualquier tecla si está activo el flag de supresión
         private void TxtBuscar_PreviewKeyDown(object? sender, KeyEventArgs e)
         {
             if (_suppressScannerInput)
-            {
-                // bloquear cualquier tecla mientras esté activo el flag
                 e.Handled = true;
-            }
         }
 
+        // Carga todos los productos y aplica paginación
         private void CargarProductos()
         {
-            // Cargamos todos los productos en memoria y aplicamos paginación
             _allProductos = _productoService.ObtenerTodos().ToList();
             _currentPage = 1;
             _productoSeleccionado = null;
@@ -87,6 +84,7 @@ namespace System_Market.Views
             UpdateButtonsState();
         }
 
+        // Aplica la paginación sobre la lista de productos y actualiza la grilla
         private void AplicarPaginacion()
         {
             if (_allProductos == null) _allProductos = new List<Producto>();
@@ -94,10 +92,10 @@ namespace System_Market.Views
             if (_currentPage > _totalPages) _currentPage = _totalPages;
             var pageItems = _allProductos.Skip((_currentPage - 1) * _pageSize).Take(_pageSize).ToList();
 
-            dgProductos.ItemsSource = null; // fuerza rebind
+            dgProductos.ItemsSource = null;
             dgProductos.ItemsSource = pageItems;
 
-            // Al cambiar de página limpiamos selección para evitar referencia inválida
+            // Limpia la selección al cambiar de página
             dgProductos.UnselectAll();
             _productoSeleccionado = null;
 
@@ -105,6 +103,7 @@ namespace System_Market.Views
             UpdateButtonsState();
         }
 
+        // Actualiza los controles de paginación (botones y texto de página)
         private void ActualizarControlesPaginacion()
         {
             btnPrevPage.IsEnabled = _currentPage > 1;
@@ -112,6 +111,7 @@ namespace System_Market.Views
             txtPageInfo.Text = $"Página {_currentPage} de {_totalPages}  ({_allProductos.Count} items)";
         }
 
+        // Navega a la página anterior
         private void BtnPrevPage_Click(object sender, RoutedEventArgs e)
         {
             if (_currentPage > 1)
@@ -121,6 +121,7 @@ namespace System_Market.Views
             }
         }
 
+        // Navega a la página siguiente
         private void BtnNextPage_Click(object sender, RoutedEventArgs e)
         {
             if (_currentPage < _totalPages)
@@ -130,8 +131,7 @@ namespace System_Market.Views
             }
         }
 
-        // --- Métodos existentes adaptados a paginación ---
-
+        // Busca productos según el texto ingresado y reinicia la paginación
         private void BtnBuscar_Click(object sender, RoutedEventArgs e)
         {
             if (!string.IsNullOrWhiteSpace(txtBuscar.Text))
@@ -142,6 +142,7 @@ namespace System_Market.Views
             }
         }
 
+        // Abre la ventana de edición para agregar un nuevo producto
         private void BtnAgregar_Click(object sender, RoutedEventArgs e)
         {
             var win = new ProductoEdicionWindow(DatabaseInitializer.GetConnectionString());
@@ -152,6 +153,7 @@ namespace System_Market.Views
             }
         }
 
+        // Abre la ventana de edición para actualizar el producto seleccionado
         private void BtnActualizar_Click(object sender, RoutedEventArgs e)
         {
             if (_productoSeleccionado == null)
@@ -160,7 +162,7 @@ namespace System_Market.Views
                 return;
             }
 
-            // Pasa una copia para evitar modificar el objeto si se cancela
+            // Se pasa una copia para evitar modificar el objeto si se cancela
             var productoCopia = new Producto
             {
                 Id = _productoSeleccionado.Id,
@@ -181,6 +183,7 @@ namespace System_Market.Views
             }
         }
 
+        // Elimina el producto seleccionado tras confirmación
         private void BtnEliminar_Click(object sender, RoutedEventArgs e)
         {
             if (_productoSeleccionado == null)
@@ -189,7 +192,6 @@ namespace System_Market.Views
                 return;
             }
 
-            // Confirmación antes de eliminar
             var confirm = MessageBox.Show(
                 $"¿Está seguro que desea eliminar el producto:\n\n" +
                 $"Código: {_productoSeleccionado.CodigoBarras}\n" +
@@ -210,20 +212,18 @@ namespace System_Market.Views
             UpdateButtonsState();
         }
 
+        // Maneja el cambio de selección en la grilla de productos
         private void dgProductos_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         {
             if (dgProductos.SelectedItem is Producto producto)
-            {
                 _productoSeleccionado = producto;
-            }
             else
-            {
                 _productoSeleccionado = null;
-            }
 
             UpdateButtonsState();
         }
 
+        // Limpia la selección de la grilla y deshabilita botones relacionados
         private void BtnLimpiar_Click(object sender, RoutedEventArgs e)
         {
             _productoSeleccionado = null;
@@ -231,6 +231,7 @@ namespace System_Market.Views
             UpdateButtonsState();
         }
 
+        // Filtra productos en tiempo real al cambiar el texto de búsqueda
         private void txtBuscar_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
         {
             string texto = txtBuscar.Text;
@@ -242,27 +243,27 @@ namespace System_Market.Views
             }
             else
             {
-                _allProductos = _productoService.Filtrar(texto).ToList(); // mantener llamado al service
+                _allProductos = _productoService.Filtrar(texto).ToList();
                 _currentPage = 1;
                 AplicarPaginacion();
             }
         }
 
-        // --- ESCÁNER: llamado desde BarcodeScannerService cuando esta ventana está activa ---
+        // Procesa un código escaneado desde el BarcodeScannerService
         public void HandleScannedCode(string codigo)
         {
             if (string.IsNullOrWhiteSpace(codigo)) return;
 
-            // Normalizar: trim + eliminar controles
+            // Normaliza el código: elimina espacios y caracteres de control
             codigo = new string((codigo ?? string.Empty).Trim().Where(c => !char.IsControl(c)).ToArray());
             if (string.IsNullOrWhiteSpace(codigo)) return;
 
             var ahora = DateTime.UtcNow;
 
-            // Ignorar scans durante el periodo tras acciones de UI
+            // Ignora escaneos durante el periodo de supresión tras acciones de UI
             if (ahora < _ignoreScannerUntil) return;
 
-            // Detectar concatenaciones donde el mismo código aparece al inicio y al final
+            // Detecta concatenaciones donde el mismo código aparece al inicio y al final
             int[] plausibleLengths = { 8, 12, 13, 14, 18 };
             foreach (var len in plausibleLengths)
             {
@@ -278,50 +279,46 @@ namespace System_Market.Views
                 }
             }
 
-            // Evitar múltiples procesados si el mismo código se repite muy rápido
+            // Evita múltiples procesados si el mismo código se repite muy rápido
             if (_lastScanCode == codigo && (ahora - _lastScanTime).TotalMilliseconds < 500)
                 return;
 
             _lastScanCode = codigo;
             _lastScanTime = ahora;
 
-            // Marcar supresión de input y reiniciar timer
+            // Activa supresión de input y reinicia el timer
             _suppressScannerInput = true;
             _suppressTimer.Stop();
             _suppressTimer.Start();
 
-            // Ejecutar en UI thread: quitar foco del textbox, escribir el código (sobrescribiendo) y buscar.
+            // Ejecuta en el hilo de UI: quita foco, escribe el código y busca
             Dispatcher.Invoke(() =>
             {
-                // 1) Quitar foco del TextBox para que las teclas del scanner no sean dirigidas a él
                 try
                 {
                     System.Windows.Input.Keyboard.ClearFocus();
                 }
                 catch { /* no crítico */ }
 
-                // 2) Proteger edición temporalmente
                 bool prevReadOnly = txtBuscar.IsReadOnly;
                 try
                 {
-                    txtBuscar.IsReadOnly = true;         // evita inserciones mientras se escribe programáticamente
-                    txtBuscar.Text = codigo;             // sobrescribe cualquier contenido anterior
+                    txtBuscar.IsReadOnly = true;
+                    txtBuscar.Text = codigo;
                     txtBuscar.CaretIndex = codigo.Length;
-                    // 3) Lanzar búsqueda con el nuevo valor (mantiene comportamiento de paginación)
                     _allProductos = _productoService.Filtrar(codigo).ToList();
                     _currentPage = 1;
                     AplicarPaginacion();
                 }
                 finally
                 {
-                    txtBuscar.IsReadOnly = prevReadOnly; // restaurar estado
-                    // Mantener foco fuera del textbox para minimizar riesgo de teclas residuales
+                    txtBuscar.IsReadOnly = prevReadOnly;
                     this.Focus();
                 }
             });
         }
 
-        // Actualiza disponibilidad de botones según selección
+        // Habilita o deshabilita los botones según si hay un producto seleccionado
         private void UpdateButtonsState()
         {
             bool hasSelection = _productoSeleccionado != null;

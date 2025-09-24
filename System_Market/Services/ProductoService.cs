@@ -5,15 +5,19 @@ using System_Market.Models;
 
 namespace System_Market.Services
 {
+    // Servicio encargado de gestionar las operaciones CRUD y consultas para productos en la base de datos.
     public class ProductoService
     {
+        // Cadena de conexión a la base de datos SQLite.
         private readonly string _connectionString;
 
+        // Constructor que recibe la cadena de conexión.
         public ProductoService(string connectionString)
         {
             _connectionString = connectionString;
         }
 
+        // Obtiene todos los productos, incluyendo los nombres de su categoría y proveedor (si existen).
         public List<Producto> ObtenerTodos()
         {
             var productos = new List<Producto>();
@@ -32,23 +36,25 @@ namespace System_Market.Services
             using var reader = cmd.ExecuteReader();
             while (reader.Read())
             {
+                // Crea una instancia de Producto por cada fila y la agrega a la lista.
                 productos.Add(new Producto
                 {
-                    Id             = reader.GetInt32(0),
-                    CodigoBarras   = reader.IsDBNull(1) ? null : reader.GetString(1),
-                    Nombre         = reader.IsDBNull(2) ? string.Empty : reader.GetString(2),
-                    CategoriaId    = reader.IsDBNull(3) ? (int?)null : reader.GetInt32(3),
-                    ProveedorId    = reader.IsDBNull(4) ? (int?)null : reader.GetInt32(4),
-                    PrecioCompra   = reader.GetDecimal(5),
-                    PrecioVenta    = reader.GetDecimal(6),
-                    Stock          = reader.GetInt32(7),
-                    CategoriaNombre= reader.IsDBNull(8) ? string.Empty : reader.GetString(8),
-                    ProveedorNombre= reader.IsDBNull(9) ? string.Empty : reader.GetString(9)
+                    Id = reader.GetInt32(0),
+                    CodigoBarras = reader.IsDBNull(1) ? null : reader.GetString(1),
+                    Nombre = reader.IsDBNull(2) ? string.Empty : reader.GetString(2),
+                    CategoriaId = reader.IsDBNull(3) ? (int?)null : reader.GetInt32(3),
+                    ProveedorId = reader.IsDBNull(4) ? (int?)null : reader.GetInt32(4),
+                    PrecioCompra = reader.GetDecimal(5),
+                    PrecioVenta = reader.GetDecimal(6),
+                    Stock = reader.GetInt32(7),
+                    CategoriaNombre = reader.IsDBNull(8) ? string.Empty : reader.GetString(8),
+                    ProveedorNombre = reader.IsDBNull(9) ? string.Empty : reader.GetString(9)
                 });
             }
             return productos;
         }
 
+        // Inserta un nuevo producto en la base de datos.
         public void AgregarProducto(Producto producto)
         {
             using var connection = new SQLiteConnection(_connectionString);
@@ -67,6 +73,7 @@ namespace System_Market.Services
             cmd.ExecuteNonQuery();
         }
 
+        // Actualiza los datos de un producto existente en la base de datos.
         public void ActualizarProducto(Producto producto)
         {
             using var connection = new SQLiteConnection(_connectionString);
@@ -92,6 +99,7 @@ namespace System_Market.Services
             cmd.ExecuteNonQuery();
         }
 
+        // Elimina un producto de la base de datos según su Id.
         public void EliminarProducto(int id)
         {
             using var connection = new SQLiteConnection(_connectionString);
@@ -102,12 +110,14 @@ namespace System_Market.Services
             cmd.ExecuteNonQuery();
         }
 
+        // Busca productos cuyo nombre o código de barras contenga todas las palabras del texto de búsqueda.
         public List<Producto> Filtrar(string texto)
         {
             var productos = new List<Producto>();
             using var connection = new SQLiteConnection(_connectionString);
             connection.Open();
 
+            // Divide el texto en palabras y arma condiciones para cada una.
             var palabras = texto?.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries) ?? Array.Empty<string>();
             var condiciones = new List<string>();
             var parametros = new List<SQLiteParameter>();
@@ -140,14 +150,14 @@ namespace System_Market.Services
             {
                 productos.Add(new Producto
                 {
-                    Id              = reader.GetInt32(0),
-                    CodigoBarras    = reader.IsDBNull(1) ? null : reader.GetString(1),
-                    Nombre          = reader.IsDBNull(2) ? string.Empty : reader.GetString(2),
-                    CategoriaId     = reader.IsDBNull(3) ? (int?)null : reader.GetInt32(3),
-                    ProveedorId     = reader.IsDBNull(4) ? (int?)null : reader.GetInt32(4),
-                    PrecioCompra    = reader.GetDecimal(5),
-                    PrecioVenta     = reader.GetDecimal(6),
-                    Stock           = reader.GetInt32(7),
+                    Id = reader.GetInt32(0),
+                    CodigoBarras = reader.IsDBNull(1) ? null : reader.GetString(1),
+                    Nombre = reader.IsDBNull(2) ? string.Empty : reader.GetString(2),
+                    CategoriaId = reader.IsDBNull(3) ? (int?)null : reader.GetInt32(3),
+                    ProveedorId = reader.IsDBNull(4) ? (int?)null : reader.GetInt32(4),
+                    PrecioCompra = reader.GetDecimal(5),
+                    PrecioVenta = reader.GetDecimal(6),
+                    Stock = reader.GetInt32(7),
                     CategoriaNombre = reader.IsDBNull(8) ? string.Empty : reader.GetString(8),
                     ProveedorNombre = reader.IsDBNull(9) ? string.Empty : reader.GetString(9)
                 });
@@ -155,6 +165,7 @@ namespace System_Market.Services
             return productos;
         }
 
+        // Busca un producto por su código de barras, considerando variantes (con/sin ceros a la izquierda, padding a 13 dígitos).
         public Producto? ObtenerPorCodigoBarras(string codigoBarras)
         {
             if (string.IsNullOrWhiteSpace(codigoBarras)) return null;
@@ -184,14 +195,14 @@ namespace System_Market.Services
             {
                 return new Producto
                 {
-                    Id           = reader.GetInt32(0),
+                    Id = reader.GetInt32(0),
                     CodigoBarras = reader.IsDBNull(1) ? null : reader.GetString(1),
-                    Nombre       = reader.IsDBNull(2) ? string.Empty : reader.GetString(2),
-                    CategoriaId  = reader.IsDBNull(3) ? (int?)null : reader.GetInt32(3),
-                    ProveedorId  = reader.IsDBNull(4) ? (int?)null : reader.GetInt32(4),
+                    Nombre = reader.IsDBNull(2) ? string.Empty : reader.GetString(2),
+                    CategoriaId = reader.IsDBNull(3) ? (int?)null : reader.GetInt32(3),
+                    ProveedorId = reader.IsDBNull(4) ? (int?)null : reader.GetInt32(4),
                     PrecioCompra = reader.GetDecimal(5),
-                    PrecioVenta  = reader.GetDecimal(6),
-                    Stock        = reader.GetInt32(7)
+                    PrecioVenta = reader.GetDecimal(6),
+                    Stock = reader.GetInt32(7)
                 };
             }
             return null;

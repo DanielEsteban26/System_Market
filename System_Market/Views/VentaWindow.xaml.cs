@@ -14,13 +14,15 @@ using System_Market.Services;
 
 namespace System_Market.Views
 {
+    // Ventana para registrar ventas: permite escanear productos, controlar stock y registrar la venta.
+    // Incluye control de duplicados, cache de productos y bloqueo/desbloqueo de edición de código.
     public partial class VentaWindow : Window
     {
         private readonly ProductoService productoService;
         private readonly VentaService ventaService;
         private ObservableCollection<DetalleVenta> detalleVenta;
 
-        // Ya no inicializamos a 1 por defecto; tomamos el Id del usuario en sesión en el constructor.
+        // Id del usuario en sesión (por defecto 1 si no hay sesión activa)
         private int usuarioId;
         private bool _codigoBloqueado;
 
@@ -28,11 +30,9 @@ namespace System_Market.Views
         private readonly SnackbarMessageQueue _snackbarQueue = new(TimeSpan.FromSeconds(2));
 
         private string? _ultimoCodigoEscaneado;
-
-        // --- NUEVO: timestamp del último código procesado para evitar duplicados rápidos ---
         private DateTime _ultimoCodigoEscaneadoTime = DateTime.MinValue;
 
-        // Cache / control carga
+        // Cache de productos por código de barras
         private Dictionary<string, Producto> _cacheProductosPorCodigo = new(StringComparer.OrdinalIgnoreCase);
         private bool _cacheListaLista;
         private readonly List<string> _codigosPendientes = new();
@@ -51,13 +51,10 @@ namespace System_Market.Views
             BloquearEdicionCodigo();
             txtCodigoBarra.Clear();
 
-            // Establecer usuario actual (si hay sesión)
             usuarioId = System_Market.Models.SesionActual.Usuario?.Id ?? 1;
 
-            // Escaneos que ocurrieron SIN ventana de ventas abierta
             DrenarEscaneosPendientes();
 
-            // NOTE: TryReplay moved to Loaded to avoid double-add when constructor overload provides an initial code.
             Loaded += VentaWindow_Loaded;
             Activated += VentaWindow_Activated;
         }
@@ -71,22 +68,16 @@ namespace System_Market.Views
                 AgregarProductoDesdeCodigo(codigoInicial.Trim(), mostrarMensajes: false);
                 txtCodigoBarra.Clear();
 
-                // Marcar que acabamos de procesar este código (evita replay desde TryReplayLastCodeFor/Loaded)
                 try
                 {
                     _ultimoCodigoEscaneado = NormalizarCodigoParaBusqueda(codigoInicial);
                     _ultimoCodigoEscaneadoTime = DateTime.UtcNow;
                 }
-                catch { /* no crítico */ }
+                catch { }
             }
         }
 
-        private void VentaWindow_Activated(object? sender, EventArgs e)
-        {
-            // Drenar nuevamente por si llegó algo entre Loaded y Activated
-            DrenarEscaneosPendientes();
-        }
-
+        // Drena códigos pendientes de escaneo (por ejemplo, si se escaneó sin ventana abierta)
         private async void DrenarEscaneosPendientes()
         {
             var list = BarcodeScannerService.DrainPendingVentaCodes();
@@ -95,12 +86,16 @@ namespace System_Market.Views
                 HandleScannedCode(c);
         }
 
+        private void VentaWindow_Activated(object? sender, EventArgs e)
+        {
+            DrenarEscaneosPendientes();
+        }
+
         private async void VentaWindow_Loaded(object? sender, RoutedEventArgs e)
         {
             await CargarCacheProductosAsync();
 
-            // Ocultar el botón "Agregar producto" en la ventana de ventas (si existe)
-            // Evita referencias directas a un control que puede haber sido eliminado del XAML.
+            // Oculta el botón "Agregar producto" si existe en el XAML
             try
             {
                 if (this.FindName("btnAgregarProducto") is Button btn)
@@ -108,12 +103,8 @@ namespace System_Market.Views
                     btn.Visibility = Visibility.Collapsed;
                 }
             }
-            catch
-            {
-                // No romper la carga si algo falla; FindName no debería lanzar, pero por seguridad dejamos el catch.
-            }
+            catch { }
 
-            // Replay tras tener cache (solo aquí para evitar doble procesamiento al crear con código inicial)
             BarcodeScannerService.TryReplayLastCodeFor(this, TimeSpan.FromSeconds(3));
 
             if (!_codigoBloqueado)
@@ -127,6 +118,7 @@ namespace System_Market.Views
             }
         }
 
+        // Precarga productos en cache para búsquedas rápidas
         private async Task CargarCacheProductosAsync()
         {
             try
@@ -145,21 +137,19 @@ namespace System_Market.Views
             }
         }
 
+        // Procesa un código escaneado, evitando duplicados rápidos
         public void HandleScannedCode(string codigo)
         {
             var normalizado = NormalizarCodigoParaBusqueda(codigo);
             if (string.IsNullOrEmpty(normalizado)) return;
 
-            // Evitar procesar repetidos muy cercanos en el tiempo (dobles/triples por reentradas)
             if (!string.IsNullOrEmpty(_ultimoCodigoEscaneado) &&
                 string.Equals(_ultimoCodigoEscaneado, normalizado, StringComparison.OrdinalIgnoreCase) &&
                 (DateTime.UtcNow - _ultimoCodigoEscaneadoTime).TotalMilliseconds < 800)
             {
-                // Ignorar duplicado rápido
                 return;
             }
 
-            // NOTA: no filtrar por letras aquí — aceptamos cualquier formato de código.
             _ultimoCodigoEscaneado = normalizado;
             _ultimoCodigoEscaneadoTime = DateTime.UtcNow;
 
@@ -176,14 +166,13 @@ namespace System_Market.Views
             }
             else
             {
-                // mostrarMensajes = false: para escaneos automáticos preferimos no mostrar MessageBox modal
                 AgregarProductoDesdeCodigo(normalizado, mostrarMensajes: false);
             }
 
-            // Limpiar el TextBox programáticamente (no afecta al flujo de escaneo)
             txtCodigoBarra.Clear();
         }
 
+        // Busca un producto en cache o en BD por código de barras
         private Producto? BuscarProductoEnCacheODB(string codigoRaw)
         {
             var codigo = NormalizarCodigoParaBusqueda(codigoRaw);
@@ -198,34 +187,31 @@ namespace System_Market.Views
             return p;
         }
 
+        // Normaliza el código para búsqueda (quita espacios y caracteres de control)
         private static string NormalizarCodigoParaBusqueda(string? codigo)
         {
             if (string.IsNullOrWhiteSpace(codigo)) return string.Empty;
-            // Trim + elimina caracteres de control (a veces los scanners incluyen \r o \n)
             var trimmed = codigo.Trim();
             return new string(trimmed.Where(ch => !char.IsControl(ch)).ToArray());
         }
 
+        // Agrega un producto a la venta desde un código, mostrando mensajes si corresponde
         private async void AgregarProductoDesdeCodigo(string codigo, bool mostrarMensajes)
         {
             codigo = NormalizarCodigoParaBusqueda(codigo);
             if (string.IsNullOrEmpty(codigo)) return;
 
-            // 1. Cache rápida
             Producto? producto = BuscarProductoEnCacheODB(codigo);
 
-            // 2. Pequeño delay (por si DB se acaba de actualizar desde otra ventana)
             if (producto == null)
             {
                 await Task.Delay(40);
                 producto = BuscarProductoEnCacheODB(codigo);
             }
 
-            // 3. Refresco amplio (variantes)
             if (producto == null)
                 producto = RefrescarProductoDesdeBD(codigo);
 
-            // --- NUEVO: fallback: buscar entre los productos ya añadidos en la venta ---
             if (producto == null)
             {
                 var todos = productoService.ObtenerTodos();
@@ -241,22 +227,19 @@ namespace System_Market.Views
                 }
             }
 
-            // 4. Si sigue null -> ahora mostramos mensaje informativo y sugerimos ir a Compras/Productos
             if (producto == null)
             {
                 var mensaje = $"Producto no encontrado para el código '{codigo}'.\n\n" +
                               "Sugerencia: vaya a 'Compras' o 'Productos' para crearlo o registrarlo antes de venderlo.";
                 MessageBox.Show(mensaje, "Producto no encontrado", MessageBoxButton.OK, MessageBoxImage.Information);
-
-                // También mostrar en snackbar una pista rápida
                 _snackbarQueue.Enqueue("Producto no encontrado. Abrir Compras o Productos para crearlo/registrarlo.");
-
                 return;
             }
 
             AgregarOIncrementarProducto(producto, mostrarMensajes);
         }
 
+        // Permite agregar producto manualmente con Enter si el código es suficientemente largo
         private void txtCodigoBarra_KeyDown(object sender, KeyEventArgs e)
         {
             if (_codigoBloqueado) return;
@@ -282,24 +265,22 @@ namespace System_Market.Views
             (k >= Key.D0 && k <= Key.D9 && !Keyboard.IsKeyDown(Key.LeftShift) && !Keyboard.IsKeyDown(Key.RightShift))
             || (k >= Key.NumPad0 && k <= Key.NumPad9);
 
-        // --- NUEVO: búsqueda robusta unificada (cache + variantes BD) ---
+        // Búsqueda robusta: cache + variantes BD
         private Producto? BuscarProductoRobusto(string codigo)
         {
             if (string.IsNullOrWhiteSpace(codigo)) return null;
             var norm = NormalizarCodigoParaBusqueda(codigo);
             if (string.IsNullOrEmpty(norm)) return null;
-
-            // Cache / BD directa / variantes
             return BuscarProductoEnCacheODB(norm) ?? RefrescarProductoDesdeBD(norm);
         }
 
+        // Agrega producto al detalle o incrementa cantidad si ya existe
         private void btnAgregarProducto_Click(object sender, RoutedEventArgs e)
         {
             if (_creacionProductoEnCurso) return;
 
             var codeTyped = (txtCodigoBarra.Text ?? string.Empty).Trim();
 
-            // 1. Sin código: informamos que la creación desde ventas está deshabilitada
             if (string.IsNullOrEmpty(codeTyped))
             {
                 MessageBox.Show("La creación/edición de productos desde la ventana de ventas está deshabilitada.\n\n" +
@@ -314,14 +295,11 @@ namespace System_Market.Views
                 return;
             }
 
-            // 2. Con código: buscar si ya existe (robusto)
             var existente = BuscarProductoRobusto(codeTyped);
 
             if (existente != null)
             {
-                // Incrementar directamente (NO abrir creación)
                 AgregarOIncrementarProducto(existente, mostrarMensajes: false);
-                // Si quieres mensaje tipo snackbar:
                 _snackbarQueue.Enqueue($"Cantidad de '{existente.Nombre}' actualizada.");
 
                 if (!_codigoBloqueado)
@@ -332,7 +310,6 @@ namespace System_Market.Views
                 return;
             }
 
-            // 3. No existe: mostrar mensaje informativo y sugerir ir a Compras/Productos
             var mensajeNoExiste = $"Producto no encontrado para el código '{codeTyped}'.\n\n" +
                                   "Vaya a 'Compras' o 'Productos' para crearlo o registrarlo antes de intentar venderlo.";
             MessageBox.Show(mensajeNoExiste, "Producto no encontrado", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -345,6 +322,7 @@ namespace System_Market.Views
             }
         }
 
+        // Aumenta la cantidad de un producto en el detalle de venta
         private void btnAumentarCantidad_Click(object sender, RoutedEventArgs e)
         {
             if ((sender as Button)?.CommandParameter is DetalleVenta det)
@@ -370,6 +348,7 @@ namespace System_Market.Views
             }
         }
 
+        // Disminuye la cantidad o elimina el producto del detalle de venta
         private void btnDisminuirCantidad_Click(object sender, RoutedEventArgs e)
         {
             if ((sender as Button)?.CommandParameter is DetalleVenta det)
@@ -388,6 +367,7 @@ namespace System_Market.Views
             }
         }
 
+        // Permite eliminar un producto del detalle con la tecla Delete
         private void dgDetalleVenta_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Delete && dgDetalleVenta.SelectedItem is DetalleVenta seleccionado)
@@ -398,6 +378,7 @@ namespace System_Market.Views
             }
         }
 
+        // Registra la venta en la base de datos tras validaciones y confirmación
         private void btnRegistrarVenta_Click(object sender, RoutedEventArgs e)
         {
             if (!detalleVenta.Any())
@@ -422,7 +403,6 @@ namespace System_Market.Views
                 }
             }
 
-            // Construir resumen para confirmación previa
             var sb = new StringBuilder();
             sb.AppendLine("Confirme la venta con los siguientes productos:");
             sb.AppendLine();
@@ -444,7 +424,6 @@ namespace System_Market.Views
             {
                 var venta = new Venta
                 {
-                    // Aseguramos usar el usuario de la sesión al momento de guardar
                     UsuarioId = System_Market.Models.SesionActual.Usuario?.Id ?? usuarioId,
                     Fecha = DateTime.Now,
                     Estado = "Activa"
@@ -470,49 +449,50 @@ namespace System_Market.Views
             }
         }
 
+        // Actualiza el total mostrado en la interfaz
         private void ActualizarTotales()
         {
             decimal total = detalleVenta.Sum(d => d.Subtotal);
             txtTotal.Text = $"Total: {total:C}";
         }
 
+        // Abre la ventana de historial de ventas
         private void BtnHistorial_Click(object sender, RoutedEventArgs e)
         {
             var historial = new HistorialVentasWindow();
             historial.ShowDialog();
         }
 
+        // Permite desbloquear el campo de código para edición manual
         private void BtnDesbloquearCodigo_Click(object sender, RoutedEventArgs e) => DesbloquearEdicionCodigo();
 
+        // Bloquea la edición manual del campo de código de barras
         private void BloquearEdicionCodigo()
         {
             _codigoBloqueado = true;
-
-            // Evitar que el TextBox reciba foco o interacción del usuario
             txtCodigoBarra.IsReadOnly = true;
-            txtCodigoBarra.IsHitTestVisible = false; // no recibirá clics ni permitirá selección
-            txtCodigoBarra.Focusable = false;        // no podrá recibir foco por teclado
+            txtCodigoBarra.IsHitTestVisible = false;
+            txtCodigoBarra.Focusable = false;
             txtCodigoBarra.Background = new SolidColorBrush(Color.FromRgb(235, 235, 235));
             txtCodigoBarra.Cursor = Cursors.Arrow;
             txtCodigoBarra.ToolTip = "F2 o 'Editar' para escribir un código manual.";
         }
 
+        // Desbloquea la edición manual del campo de código de barras
         private void DesbloquearEdicionCodigo()
         {
             _codigoBloqueado = false;
-
             txtCodigoBarra.IsReadOnly = false;
             txtCodigoBarra.IsHitTestVisible = true;
             txtCodigoBarra.Focusable = true;
             txtCodigoBarra.ClearValue(TextBox.BackgroundProperty);
             txtCodigoBarra.Cursor = Cursors.IBeam;
             txtCodigoBarra.ToolTip = null;
-
-            // Poner foco y seleccionar todo para facilitar la edición manual
             txtCodigoBarra.Focus();
             txtCodigoBarra.SelectAll();
         }
 
+        // Permite desbloquear el campo de código con F2
         protected override void OnPreviewKeyDown(KeyEventArgs e)
         {
             if (e.Key == Key.F2)
@@ -523,7 +503,7 @@ namespace System_Market.Views
             base.OnPreviewKeyDown(e);
         }
 
-        // Reemplaza el método CrearProductoInteractivo por esta versión con control de reentrada:
+        // Permite crear un producto desde la ventana de ventas (no se usa por defecto)
         private Producto? CrearProductoInteractivo(string? codigoPrefill, bool bloquearCodigo = true)
         {
             if (_creacionProductoEnCurso) return null;
@@ -546,10 +526,8 @@ namespace System_Market.Views
 
                 try
                 {
-                    // Guardar en BD
                     productoService.AgregarProducto(win.Producto);
 
-                    // Re-consultar para asegurar Id real
                     Producto? recien = null;
                     if (!string.IsNullOrWhiteSpace(win.Producto.CodigoBarras))
                         recien = productoService.ObtenerPorCodigoBarras(win.Producto.CodigoBarras!);
@@ -584,11 +562,11 @@ namespace System_Market.Views
             }
         }
 
+        // Agrega o incrementa la cantidad de un producto en la venta
         private void AgregarOIncrementarProducto(Producto producto, bool mostrarMensajes)
         {
             var detExistente = detalleVenta.FirstOrDefault(d => d.ProductoId == producto.Id);
 
-            // Validar Id correcto
             if (producto.Id <= 0)
             {
                 _snackbarQueue.Enqueue("Producto sin Id válido (no agregado).");
@@ -624,24 +602,23 @@ namespace System_Market.Views
                 });
             }
 
-            // MARCAR código procesado (evita reentrada por replay/pendientes)
             try
             {
                 if (!string.IsNullOrWhiteSpace(producto.CodigoBarras))
                     _ultimoCodigoEscaneado = NormalizarCodigoParaBusqueda(producto.CodigoBarras);
                 _ultimoCodigoEscaneadoTime = DateTime.UtcNow;
             }
-            catch { /* no crítico */ }
+            catch { }
 
             dgDetalleVenta.Items.Refresh();
             ActualizarTotales();
         }
 
+        // Refresca un producto desde la base de datos considerando variantes de código
         private Producto? RefrescarProductoDesdeBD(string codigo)
         {
             if (string.IsNullOrWhiteSpace(codigo)) return null;
 
-            // variantes
             string original = codigo.Trim();
             string sinCeros = original.TrimStart('0');
             string padded13 = (sinCeros.All(char.IsDigit) && sinCeros.Length > 0 && sinCeros.Length < 13)

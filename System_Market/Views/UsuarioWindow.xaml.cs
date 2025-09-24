@@ -17,9 +17,8 @@ using System_Market.Services;
 
 namespace System_Market.Views
 {
-    /// <summary>
-    /// Lógica de interacción para UsuarioWindow.xaml
-    /// </summary>
+    // Ventana para la gestión de usuarios del sistema (administradores y cajeros).
+    // Permite agregar, actualizar, eliminar y listar usuarios.
     public partial class UsuarioWindow : Window
     {
         private readonly UsuarioService _usuarioService;
@@ -32,6 +31,7 @@ namespace System_Market.Views
             CargarUsuarios();
         }
 
+        // Carga la lista de usuarios y la muestra en el DataGrid
         private void CargarUsuarios()
         {
             dgUsuarios.ItemsSource = null;
@@ -39,6 +39,7 @@ namespace System_Market.Views
             dgUsuarios.ItemsSource = lista;
         }
 
+        // Agrega un nuevo usuario validando los campos y el rol
         private void btnAgregar_Click(object sender, RoutedEventArgs e)
         {
             if (string.IsNullOrWhiteSpace(txtNombre.Text) ||
@@ -69,12 +70,13 @@ namespace System_Market.Views
                 LimpiarCampos();
                 MessageBox.Show("Usuario agregado correctamente.", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 MessageBox.Show(ex.Message, "Error al agregar", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
+        // Actualiza el usuario seleccionado con los datos del formulario
         private void btnActualizar_Click(object sender, RoutedEventArgs e)
         {
             if (_usuarioSeleccionado == null)
@@ -99,12 +101,13 @@ namespace System_Market.Views
                 LimpiarCampos();
                 MessageBox.Show("Usuario actualizado correctamente.", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 MessageBox.Show(ex.Message, "Error al actualizar", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
+        // Elimina el usuario seleccionado tras confirmación
         private void btnEliminar_Click(object sender, RoutedEventArgs e)
         {
             if (_usuarioSeleccionado == null)
@@ -124,17 +127,19 @@ namespace System_Market.Views
                 LimpiarCampos();
                 MessageBox.Show("Usuario eliminado correctamente.", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 MessageBox.Show(ex.Message, "Error al eliminar", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
+        // Limpia los campos del formulario y la selección
         private void btnLimpiar_Click(object sender, RoutedEventArgs e)
         {
             LimpiarCampos();
         }
 
+        // Al seleccionar un usuario en el DataGrid, carga sus datos en el formulario
         private void dgUsuarios_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (dgUsuarios.SelectedItem is Usuario usuario)
@@ -147,6 +152,7 @@ namespace System_Market.Views
             }
         }
 
+        // Limpia los campos de entrada y la selección
         private void LimpiarCampos()
         {
             txtNombre.Clear();

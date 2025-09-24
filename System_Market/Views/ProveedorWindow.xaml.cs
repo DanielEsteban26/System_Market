@@ -8,9 +8,8 @@ using System_Market.Services;
 
 namespace System_Market.Views
 {
-    /// <summary>
-    /// Lógica de interacción para ProveedorWindow.xaml
-    /// </summary>
+    // Ventana para la gestión de proveedores.
+    // Permite agregar, actualizar, eliminar y listar proveedores, validando duplicados y RUC único.
     public partial class ProveedorWindow : Window
     {
         private readonly ProveedorService _proveedorService;
@@ -28,18 +27,19 @@ namespace System_Market.Views
             CargarProveedores();
         }
 
+        // Carga la lista de proveedores y reinicia la selección y botones
         private void CargarProveedores()
         {
             dgProveedores.ItemsSource = null;
             List<Proveedor> lista = _proveedorService.ObtenerTodos();
             dgProveedores.ItemsSource = lista;
 
-            // asegurar estado inicial: sin selección, botones deshabilitados
             dgProveedores.SelectedIndex = -1;
             btnActualizar.IsEnabled = false;
             btnEliminar.IsEnabled = false;
         }
 
+        // Agrega un nuevo proveedor validando duplicados y RUC único
         private void btnAgregar_Click(object sender, RoutedEventArgs e)
         {
             var nombre = (txtNombre.Text ?? string.Empty).Trim();
@@ -52,7 +52,6 @@ namespace System_Market.Views
                 return;
             }
 
-            // Detección de duplicados (exactos) y RUC único
             var lista = _proveedorService.ObtenerTodos();
             if (lista.Any(p => string.Equals(p.Nombre?.Trim(), nombre, StringComparison.OrdinalIgnoreCase)
                                && string.Equals(p.RUC?.Trim(), ruc, StringComparison.OrdinalIgnoreCase)
@@ -91,6 +90,7 @@ namespace System_Market.Views
             }
         }
 
+        // Actualiza el proveedor seleccionado validando duplicados y RUC único
         private void btnActualizar_Click(object sender, RoutedEventArgs e)
         {
             if (dgProveedores.SelectedItem is not Proveedor seleccionado)
@@ -110,7 +110,6 @@ namespace System_Market.Views
             }
 
             var lista = _proveedorService.ObtenerTodos();
-            // duplicado exacto en otro registro?
             if (lista.Any(p => p.Id != seleccionado.Id
                                && string.Equals(p.Nombre?.Trim(), nombre, StringComparison.OrdinalIgnoreCase)
                                && string.Equals(p.RUC?.Trim(), ruc, StringComparison.OrdinalIgnoreCase)
@@ -120,7 +119,6 @@ namespace System_Market.Views
                 return;
             }
 
-            // RUC duplicado en otro registro
             if (!string.IsNullOrEmpty(ruc) && lista.Any(p => p.Id != seleccionado.Id && !string.IsNullOrEmpty(p.RUC) && string.Equals(p.RUC.Trim(), ruc, StringComparison.OrdinalIgnoreCase)))
             {
                 MessageBox.Show("El RUC ya está en uso por otro proveedor.", "Duplicado", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -147,6 +145,7 @@ namespace System_Market.Views
             }
         }
 
+        // Elimina el proveedor seleccionado tras confirmación
         private void btnEliminar_Click(object sender, RoutedEventArgs e)
         {
             if (dgProveedores.SelectedItem is not Proveedor seleccionado)
@@ -171,11 +170,13 @@ namespace System_Market.Views
             }
         }
 
+        // Refresca la lista de proveedores
         private void btnRefrescar_Click(object sender, RoutedEventArgs e)
         {
             CargarProveedores();
         }
 
+        // Maneja la selección de la grilla y actualiza los campos y botones
         private void dgProveedores_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         {
             if (dgProveedores.SelectedItem is Proveedor seleccionado)
@@ -185,26 +186,24 @@ namespace System_Market.Views
                 txtRUC.Text = seleccionado.RUC;
                 txtTelefono.Text = seleccionado.Telefono;
 
-                // habilitar acciones
                 btnActualizar.IsEnabled = true;
                 btnEliminar.IsEnabled = true;
             }
             else
             {
-                // sin selección, deshabilitar acciones
                 LimpiarCampos();
                 btnActualizar.IsEnabled = false;
                 btnEliminar.IsEnabled = false;
             }
         }
 
+        // Limpia los campos de entrada y la selección de la grilla
         private void LimpiarCampos()
         {
             txtNombre.Text = "";
             txtRUC.Text = "";
             txtTelefono.Text = "";
 
-            // limpiar selección y deshabilitar botones
             try
             {
                 dgProveedores.SelectedIndex = -1;

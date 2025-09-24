@@ -7,65 +7,69 @@
         Width="460"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize">
-	<!-- Fondo: degradado coherente con la paleta usada en otras ventanas -->
-	<Window.Background>
-		<LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-			<GradientStop Color="#FF9B82C9" Offset="0"/>
-			<GradientStop Color="#FFC9BFE8" Offset="0.6"/>
-			<GradientStop Color="#FFEFEFF4" Offset="1"/>
-		</LinearGradientBrush>
-	</Window.Background>
+    <!-- Fondo: degradado coherente con la paleta usada en otras ventanas -->
+    <Window.Background>
+        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+            <GradientStop Color="#FF9B82C9" Offset="0"/>
+            <GradientStop Color="#FFC9BFE8" Offset="0.6"/>
+            <GradientStop Color="#FFEFEFF4" Offset="1"/>
+        </LinearGradientBrush>
+    </Window.Background>
 
-	<Grid Margin="20">
-		<Grid.RowDefinitions>
-			<RowDefinition Height="55*"/>
-			<RowDefinition Height="309*"/>
-		</Grid.RowDefinitions>
-		<!-- Tarjeta: color ligeramente más oscuro que blanco para mayor contraste -->
-		<Border Background="#EDE1E1"
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="55*"/>
+            <RowDefinition Height="309*"/>
+        </Grid.RowDefinitions>
+        <!-- Tarjeta: color ligeramente más oscuro que blanco para mayor contraste -->
+        <Border Background="#EDE1E1"
                 CornerRadius="8"
                 Padding="18"
                 VerticalAlignment="Top"
                 materialDesign:ShadowAssist.ShadowDepth="Depth2" Grid.RowSpan="2">
-			<Grid>
-				<Grid.RowDefinitions>
-					<RowDefinition Height="Auto"/>
-					<RowDefinition Height="Auto"/>
-					<RowDefinition Height="Auto"/>
-					<RowDefinition Height="Auto"/>
-					<RowDefinition Height="Auto"/>
-					<RowDefinition Height="Auto"/>
-				</Grid.RowDefinitions>
-				<Grid.ColumnDefinitions>
-					<ColumnDefinition Width="*"/>
-				</Grid.ColumnDefinitions>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
 
-				<StackPanel Grid.Row="0" Orientation="Vertical" Margin="0,0,0,6">
-					<!-- Título: color más oscuro para que se lea bien sobre la tarjeta -->
-					<TextBlock Text="Registro de usuario" FontSize="18" FontWeight="Bold" Foreground="#222226"/>
-					<TextBlock x:Name="txtInfo" Text=" " FontSize="12" Foreground="#6B6B6B" Margin="0,6,0,0"/>
-				</StackPanel>
+                <!-- Encabezado del formulario de registro -->
+                <StackPanel Grid.Row="0" Orientation="Vertical" Margin="0,0,0,6">
+                    <!-- Título: color más oscuro para que se lea bien sobre la tarjeta -->
+                    <TextBlock Text="Registro de usuario" FontSize="18" FontWeight="Bold" Foreground="#222226"/>
+                    <TextBlock x:Name="txtInfo" Text=" " FontSize="12" Foreground="#6B6B6B" Margin="0,6,0,0"/>
+                </StackPanel>
 
-				<TextBox Grid.Row="1" x:Name="txtNombre" Height="36" Margin="0,6,0,0"
+                <!-- Campo: Nombre completo -->
+                <TextBox Grid.Row="1" x:Name="txtNombre" Height="36" Margin="0,6,0,0"
                          materialDesign:HintAssist.Hint="Nombre completo"
                          VerticalContentAlignment="Center" />
 
-				<TextBox Grid.Row="2" x:Name="txtUsuario" Height="36" Margin="0,8,0,0"
+                <!-- Campo: Nombre de usuario -->
+                <TextBox Grid.Row="2" x:Name="txtUsuario" Height="36" Margin="0,8,0,0"
                          materialDesign:HintAssist.Hint="Nombre de usuario"
                          VerticalContentAlignment="Center" />
 
-				<PasswordBox Grid.Row="3" x:Name="txtClave" Height="36" Margin="0,8,0,0"
+                <!-- Campo: Clave -->
+                <PasswordBox Grid.Row="3" x:Name="txtClave" Height="36" Margin="0,8,0,0"
                              materialDesign:HintAssist.Hint="Clave (mín. 6 caracteres)"
                              VerticalContentAlignment="Center" />
 
-				<!-- Campo de clave administrador (solo visible si ya existe admin) -->
-				<PasswordBox Grid.Row="4" x:Name="txtAdminClave" Height="36" Margin="0,8,0,0"
+                <!-- Campo de clave administrador (solo visible si ya existe admin) -->
+                <PasswordBox Grid.Row="4" x:Name="txtAdminClave" Height="36" Margin="0,8,0,0"
                              materialDesign:HintAssist.Hint="Clave de administrador (autorización)"
                              VerticalContentAlignment="Center" Visibility="Collapsed" />
 
-				<!-- Botones: mantener lógica, mejorar contraste del botón Registrar -->
-				<StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
-					<Button Content="Cancelar"
+                <!-- Botones de acción: Cancelar y Registrar -->
+                <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+                    <Button Content="Cancelar"
                             Width="110"
                             Height="36"
                             IsCancel="True"
@@ -73,7 +77,7 @@
                             Foreground="{DynamicResource PrimaryHueMidBrush}"
                             materialDesign:RippleAssist.IsCentered="False"
                             Click="BtnCancelar_Click"/>
-					<Button Content="Registrar"
+                    <Button Content="Registrar"
                             Width="140"
                             Height="36"
                             IsDefault="True"
@@ -83,24 +87,24 @@
                             Click="BtnRegistrar_Click"
                             materialDesign:RippleAssist.IsCentered="False"
                             BorderBrush="Transparent">
-						<!-- Degradado explícito para asegurar contraste de texto -->
-						<Button.Background>
-							<LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-								<GradientStop Color="#FF2E7BBF" Offset="0"/>
-								<GradientStop Color="#FF45C1F0" Offset="1"/>
-							</LinearGradientBrush>
-						</Button.Background>
-						<!-- Bordes redondeados más suaves -->
-						<Button.Template>
-							<ControlTemplate TargetType="Button">
-								<Border CornerRadius="8" Background="{TemplateBinding Background}" Padding="6">
-									<ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-								</Border>
-							</ControlTemplate>
-						</Button.Template>
-					</Button>
-				</StackPanel>
-			</Grid>
-		</Border>
-	</Grid>
+                        <!-- Degradado explícito para asegurar contraste de texto -->
+                        <Button.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                <GradientStop Color="#FF2E7BBF" Offset="0"/>
+                                <GradientStop Color="#FF45C1F0" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Button.Background>
+                        <!-- Bordes redondeados más suaves -->
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border CornerRadius="8" Background="{TemplateBinding Background}" Padding="6">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
 </Window>

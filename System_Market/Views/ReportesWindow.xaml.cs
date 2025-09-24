@@ -711,7 +711,7 @@ namespace System_Market.Views
             {
                 var desde = (dpDesdeVentas.SelectedDate ?? DateTime.Today).Date;
                 var hasta = (dpHastaVentas.SelectedDate ?? DateTime.Today).Date.AddDays(1).AddTicks(-1);
-                if (hasta <desde) { MessageBox.Show("Rango inválido.", "Exportar", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
+                if (hasta < desde) { MessageBox.Show("Rango inválido.", "Exportar", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
 
                 var list = _ventaService.ObtenerTodas().Where(v => v.Fecha >= desde && v.Fecha <= hasta).OrderBy(v => v.Fecha).ToList();
                 if (!list.Any()) { MessageBox.Show("No hay ventas en el rango.", "Exportar", MessageBoxButton.OK, MessageBoxImage.Information); return; }

@@ -1,3 +1,4 @@
+// Referencias a librerías base, WPF y utilidades del sistema
 using System;
 using System.Data.SQLite;
 using System.Diagnostics;
@@ -9,12 +10,17 @@ using System_Market.Models;
 
 namespace System_Market.Views
 {
+    // Ventana de inicio de sesión del sistema.
+    // Permite autenticar usuarios y acceder al sistema según su rol.
     public partial class LoginWindow : Window
     {
+        // Controla que solo exista una instancia de la ventana de login abierta a la vez
         private static bool _isOpen;
 
+        // Usuario autenticado tras un login exitoso
         public Usuario? UsuarioLogueado { get; private set; }
 
+        // Constructor: inicializa la ventana y previene instancias duplicadas
         public LoginWindow()
         {
             if (_isOpen)
@@ -27,10 +33,12 @@ namespace System_Market.Views
             Debug.WriteLine("LoginWindow.ctor - new instance");
             InitializeComponent();
 
+            // Eventos de ciclo de vida de la ventana
             Loaded += LoginWindow_Loaded;
             Closed += (_, __) => { _isOpen = false; Debug.WriteLine("LoginWindow.Closed"); };
         }
 
+        // Evento: al cargar la ventana, enfoca el campo usuario y registra eventos de teclado
         private void LoginWindow_Loaded(object? sender, RoutedEventArgs e)
         {
             Debug.WriteLine("LoginWindow.Loaded");
@@ -48,6 +56,7 @@ namespace System_Market.Views
             }
         }
 
+        // Permite iniciar sesión presionando Enter en los campos de usuario o contraseña
         private void TxtInput_KeyDown(object? sender, KeyEventArgs e)
         {
             if (e.Key != Key.Enter) return;
@@ -76,6 +85,7 @@ namespace System_Market.Views
             BtnIngresar_Click(this, new RoutedEventArgs());
         }
 
+        // Lógica principal de autenticación: valida usuario y contraseña contra la base de datos
         private void BtnIngresar_Click(object sender, RoutedEventArgs e)
         {
             string usuario = txtUsuario.Text.Trim();
@@ -92,6 +102,7 @@ namespace System_Market.Views
                 using var connection = new SQLiteConnection(DatabaseInitializer.GetConnectionString());
                 connection.Open();
 
+                // Consulta SQL para buscar el usuario con las credenciales ingresadas
                 string query = "SELECT Id, Nombre, Usuario, Clave, Rol FROM Usuarios WHERE Usuario = @usuario AND Clave = @clave LIMIT 1";
                 using var cmd = new SQLiteCommand(query, connection);
                 cmd.Parameters.AddWithValue("@usuario", usuario);
@@ -101,6 +112,7 @@ namespace System_Market.Views
                 if (reader.Read())
                 {
                     Debug.WriteLine("LoginWindow - credentials OK, set DialogResult = true");
+                    // Si las credenciales son correctas, crea el objeto Usuario y lo guarda en sesión
                     UsuarioLogueado = new Usuario
                     {
                         Id = reader.GetInt32(0),
@@ -117,6 +129,7 @@ namespace System_Market.Views
                     return;
                 }
 
+                // Si no se encontró el usuario, muestra error y limpia la contraseña
                 MessageBox.Show("Usuario o contraseña incorrectos.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 txtPassword.Clear();
                 txtUsuario.Focus();
@@ -127,6 +140,7 @@ namespace System_Market.Views
             }
         }
 
+        // Abre la ventana de registro de usuario como modal
         private void btnRegister_Click(object sender, RoutedEventArgs e)
         {
             var reg = new RegisterWindow
@@ -139,7 +153,7 @@ namespace System_Market.Views
             reg.ShowDialog();
         }
 
-        // Manejador para abrir enlaces (correo / web)
+        // Manejador para abrir enlaces (correo / web) desde la ventana
         private void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)
         {
             try
@@ -153,11 +167,13 @@ namespace System_Market.Views
             e.Handled = true;
         }
 
+        // Cierra la ventana de login
         private void BtnClose_Click(object sender, RoutedEventArgs e)
         {
             this.Close();
         }
 
+        // Permite arrastrar la ventana haciendo clic en el borde superior
         private void Border_MouseDown(object sender, MouseButtonEventArgs e)
         {
             if (e.LeftButton == MouseButtonState.Pressed)
@@ -166,6 +182,7 @@ namespace System_Market.Views
             }
         }
 
+        // Permite cerrar la ventana presionando la tecla Escape
         private void Window_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Escape)

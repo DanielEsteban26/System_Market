@@ -8,15 +8,20 @@ using System_Market.Models;
 
 namespace System_Market.Services
 {
+    // Servicio encargado de gestionar las operaciones de ventas en la base de datos.
+    // Permite registrar, actualizar, anular y consultar ventas y sus detalles.
     public class VentaService
     {
+        // Cadena de conexión a la base de datos SQLite.
         private readonly string _connectionString;
 
+        // Constructor que recibe la cadena de conexión.
         public VentaService(string connectionString)
         {
             _connectionString = connectionString;
         }
 
+        // Obtiene todas las ventas registradas, incluyendo el nombre del usuario que realizó la venta.
         public List<Venta> ObtenerTodas()
         {
             var ventas = new List<Venta>();
@@ -45,9 +50,8 @@ namespace System_Market.Services
             return ventas;
         }
 
-        /// <summary>
-        /// Registra la venta, sus detalles y descuenta el stock en una sola transacción.
-        /// </summary>
+        // Registra una venta con sus detalles y descuenta el stock de los productos en una sola transacción.
+        // Devuelve el Id de la venta registrada.
         public int AgregarVentaConDetalles(Venta venta, List<DetalleVenta> detalles)
         {
             using var connection = new SQLiteConnection(_connectionString);
@@ -56,7 +60,7 @@ namespace System_Market.Services
 
             try
             {
-                // Validar stock antes de registrar la venta
+                // Valida que haya suficiente stock para cada producto antes de registrar la venta.
                 foreach (var detalle in detalles)
                 {
                     string queryStock = "SELECT Stock FROM Productos WHERE Id = @ProductoId";
@@ -70,7 +74,7 @@ namespace System_Market.Services
                             $"No hay suficiente stock para el producto '{detalle.ProductoNombre}'. Stock actual: {stockActual}, solicitado: {detalle.Cantidad}");
                     }
                 }
-                // Calcular total
+                // Calcula el total de la venta sumando los subtotales de cada detalle.
                 venta.Total = 0;
                 foreach (var d in detalles)
                 {
@@ -78,7 +82,7 @@ namespace System_Market.Services
                     venta.Total += d.Subtotal;
                 }
 
-                // Insertar la venta (cabecera)
+                // Inserta la venta principal y obtiene el Id generado.
                 string queryVenta = @"INSERT INTO Ventas (UsuarioId, Fecha, Total, Estado, MotivoAnulacion)
                                       VALUES (@UsuarioId, @Fecha, @Total, @Estado, @MotivoAnulacion);
                                       SELECT last_insert_rowid();";
@@ -90,7 +94,7 @@ namespace System_Market.Services
                 cmdVenta.Parameters.AddWithValue("@MotivoAnulacion", venta.MotivoAnulacion ?? "");
                 int ventaId = Convert.ToInt32(cmdVenta.ExecuteScalar());
 
-                // Insertar los detalles y actualizar stock
+                // Inserta cada detalle de la venta y descuenta el stock del producto correspondiente.
                 foreach (var detalle in detalles)
                 {
                     string queryDetalle = @"INSERT INTO DetalleVentas (VentaId, ProductoId, Cantidad, PrecioUnitario, Subtotal)
@@ -103,7 +107,7 @@ namespace System_Market.Services
                     cmdDetalle.Parameters.AddWithValue("@Subtotal", detalle.Subtotal);
                     cmdDetalle.ExecuteNonQuery();
 
-                    // Descontar stock
+                    // Descuenta el stock del producto vendido.
                     string queryStock = @"UPDATE Productos SET Stock = Stock - @Cantidad WHERE Id = @ProductoId";
                     using var cmdStock = new SQLiteCommand(queryStock, connection, transaction);
                     cmdStock.Parameters.AddWithValue("@Cantidad", detalle.Cantidad);
@@ -116,11 +120,13 @@ namespace System_Market.Services
             }
             catch
             {
+                // Si ocurre un error, revierte toda la transacción.
                 transaction.Rollback();
                 throw;
             }
         }
 
+        // Actualiza los datos de una venta existente en la base de datos.
         public void ActualizarVenta(Venta venta)
         {
             using var connection = new SQLiteConnection(_connectionString);
@@ -142,6 +148,7 @@ namespace System_Market.Services
             cmd.ExecuteNonQuery();
         }
 
+        // Obtiene todos los detalles de una venta específica, incluyendo el nombre del producto.
         public List<DetalleVenta> ObtenerDetallesPorVenta(int ventaId)
         {
             var detalles = new List<DetalleVenta>();
@@ -172,9 +179,8 @@ namespace System_Market.Services
             return detalles;
         }
 
-        /// <summary>
-        /// Anula la venta y devuelve el stock de los productos.
-        /// </summary>
+        // Anula una venta y devuelve el stock de los productos involucrados.
+        // Cambia el estado de la venta a "Anulada" y suma al stock las cantidades vendidas.
         public void AnularVenta(int ventaId, string motivo)
         {
             using var connection = new SQLiteConnection(_connectionString);
@@ -183,14 +189,14 @@ namespace System_Market.Services
 
             try
             {
-                // Cambiar estado y motivo
+                // Cambia el estado de la venta a "Anulada" y guarda el motivo.
                 string query = @"UPDATE Ventas SET Estado = 'Anulada', MotivoAnulacion = @Motivo WHERE Id = @Id";
                 using var cmd = new SQLiteCommand(query, connection, transaction);
                 cmd.Parameters.AddWithValue("@Motivo", motivo);
                 cmd.Parameters.AddWithValue("@Id", ventaId);
                 cmd.ExecuteNonQuery();
 
-                // Obtener detalles de la venta
+                // Obtiene los detalles de la venta anulada.
                 string queryDetalles = "SELECT ProductoId, Cantidad FROM DetalleVentas WHERE VentaId = @VentaId";
                 using var cmdDetalles = new SQLiteCommand(queryDetalles, connection, transaction);
                 cmdDetalles.Parameters.AddWithValue("@VentaId", ventaId);
@@ -201,7 +207,7 @@ namespace System_Market.Services
                     detalles.Add((reader.GetInt32(0), reader.GetInt32(1)));
                 }
 
-                // Revertir stock
+                // Por cada producto, suma al stock la cantidad que había sido descontada al vender.
                 foreach (var d in detalles)
                 {
                     string queryStock = @"UPDATE Productos SET Stock = Stock + @Cantidad WHERE Id = @ProductoId";
@@ -215,6 +221,7 @@ namespace System_Market.Services
             }
             catch
             {
+                // Si ocurre un error, revierte toda la transacción.
                 transaction.Rollback();
                 throw;
             }

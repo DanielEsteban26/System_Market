@@ -10,21 +10,25 @@ namespace System_Market.Views
 {
     public partial class CategoriaWindow : Window
     {
+        // Servicio para operaciones CRUD de categorías
         private readonly CategoriaService _categoriaService;
 
         public CategoriaWindow()
         {
             InitializeComponent();
+            // Inicializa el servicio con la cadena de conexión y carga las categorías al abrir la ventana
             _categoriaService = new CategoriaService(DatabaseInitializer.GetConnectionString());
             CargarCategorias();
         }
 
+        // Carga todas las categorías desde la base de datos y las muestra en el DataGrid
         private void CargarCategorias()
         {
             List<Categoria> categorias = _categoriaService.ObtenerTodas();
             dgCategorias.ItemsSource = categorias;
         }
 
+        // Evento: Agregar nueva categoría
         private void BtnAgregar_Click(object sender, RoutedEventArgs e)
         {
             var nombre = (txtNombreCategoria.Text ?? string.Empty).Trim();
@@ -34,7 +38,7 @@ namespace System_Market.Views
                 return;
             }
 
-            // Validar duplicado por nombre (insensible a mayúsc/minús)
+            // Validación: no permitir duplicados (insensible a mayúsculas/minúsculas)
             var existentes = _categoriaService.ObtenerTodas();
             if (existentes.Exists(c => string.Equals(c.Nombre?.Trim(), nombre, StringComparison.OrdinalIgnoreCase)))
             {
@@ -42,6 +46,7 @@ namespace System_Market.Views
                 return;
             }
 
+            // Confirmación antes de agregar
             var confirmar = MessageBox.Show($"¿Desea agregar la categoría '{nombre}'?", "Confirmar agregado", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (confirmar != MessageBoxResult.Yes) return;
 
@@ -59,6 +64,7 @@ namespace System_Market.Views
             }
         }
 
+        // Evento: Actualizar categoría seleccionada
         private void BtnActualizar_Click(object sender, RoutedEventArgs e)
         {
             if (dgCategorias.SelectedItem is not Categoria categoriaSeleccionada)
@@ -75,13 +81,14 @@ namespace System_Market.Views
             }
 
             var existentes = _categoriaService.ObtenerTodas();
-            // verificar duplicado en otro registro
+            // Validación: no permitir duplicados en otro registro
             if (existentes.Exists(c => c.Id != categoriaSeleccionada.Id && string.Equals(c.Nombre?.Trim(), nuevoNombre, StringComparison.OrdinalIgnoreCase)))
             {
                 MessageBox.Show("Ya existe otra categoría con ese nombre.", "Duplicado", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
+            // Confirmación antes de actualizar
             var confirmar = MessageBox.Show($"¿Desea actualizar la categoría '{categoriaSeleccionada.Nombre}' → '{nuevoNombre}'?", "Confirmar actualización", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (confirmar != MessageBoxResult.Yes) return;
 
@@ -99,6 +106,7 @@ namespace System_Market.Views
             }
         }
 
+        // Evento: Eliminar categoría seleccionada
         private void BtnEliminar_Click(object sender, RoutedEventArgs e)
         {
             if (dgCategorias.SelectedItem is not Categoria categoriaSeleccionada)
@@ -107,6 +115,7 @@ namespace System_Market.Views
                 return;
             }
 
+            // Confirmación antes de eliminar
             var confirmar = MessageBox.Show($"¿Eliminar la categoría '{categoriaSeleccionada.Nombre}'? Esta acción no se puede deshacer.", "Confirmar eliminación", MessageBoxButton.YesNo, MessageBoxImage.Warning);
             if (confirmar != MessageBoxResult.Yes) return;
 
@@ -123,6 +132,7 @@ namespace System_Market.Views
             }
         }
 
+        // Evento: Cuando cambia la selección en el DataGrid, muestra el nombre en el TextBox
         private void dgCategorias_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (dgCategorias.SelectedItem is Categoria categoriaSeleccionada)

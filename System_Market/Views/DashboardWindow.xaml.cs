@@ -1,4 +1,5 @@
-﻿using LiveChartsCore;
+﻿// Referencias a librerías de gráficos, UI, base de datos y utilidades
+using LiveChartsCore;
 using LiveChartsCore.Defaults;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.SkiaSharpView;
@@ -27,22 +28,31 @@ using System_Market.Services;
 
 namespace System_Market.Views
 {
+    // Ventana principal del dashboard, muestra KPIs, gráficos y accesos rápidos
     public partial class DashboardWindow : Window
     {
+        // Cadena de conexión a la base de datos
         private readonly string _conn;
+        // Servicios para acceder a productos, ventas, compras, categorías y usuarios
         private readonly ProductoService _productoService;
         private readonly VentaService _ventaService;
         private readonly CompraService _compraService;
         private readonly CategoriaService _categoriaService;
         private readonly UsuarioService _usuarioService;
 
+        // Nombre del usuario actual (para mostrar en la UI)
         private readonly string _usuarioActualNombre;
+        // Umbral para considerar un producto con stock bajo
         private int _umbralStock = 5;
 
+        // Acciones rápidas configurables por el usuario
         private readonly ObservableCollection<QuickAction> _accionesRapidas = new();
+        // Presets de rango de fecha para los filtros
         public ObservableCollection<RangoFechaPreset> RangoFechaPresets { get; } = new();
+        // Lista de órdenes recientes para mostrar en el dashboard
         public ObservableCollection<OrdenRecienteDTO> OrdenesRecientes { get; } = new();
 
+        // Catálogo de todas las acciones rápidas posibles
         private readonly List<AccionDef> _catalogoAcciones = new()
         {
             new("NuevaVenta","Nueva Venta","\uE73E"),
@@ -57,23 +67,28 @@ namespace System_Market.Views
             new("Categorias","Gestión Categorías","\uE1CB")
         };
 
+        // Máxima cantidad vendida en el top de productos (para escalar barras)
         public int MaxCantidadTop { get; private set; }
 
+        // Ruta donde se guardan las acciones rápidas personalizadas
         private string QuickActionsFilePath =>
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "System_Market", "quick_actions_dashboard.json");
 
+        // Series de gráficos para ingresos y gastos
         private ColumnSeries<ObservablePoint>? _serieIngresos;
         private ColumnSeries<ObservablePoint>? _serieGastos;
         private readonly ObservablePoint _pIngresos = new(0, 0);
         private readonly ObservablePoint _pGastos = new(1, 0);
 
-        private Dictionary<(int h,int d),(int ventas,int rank,double pctMax)> _heatmapMeta
-    = new();
+        // Diccionario para metadatos del heatmap de ventas por hora/día
+        private Dictionary<(int h, int d), (int ventas, int rank, double pctMax)> _heatmapMeta = new();
 
+        // Controla la frecuencia de algunos diálogos y el último código escaneado
         private DateTime _ultimoDialogo = DateTime.MinValue;
         private string? _ultimoCodigo;
 
+        // Constructor principal, inicializa servicios, combos y acciones rápidas
         public DashboardWindow(string usuarioActualNombre = "Usuario")
         {
             _usuarioActualNombre = string.IsNullOrWhiteSpace(usuarioActualNombre) ? "Usuario" : usuarioActualNombre;
@@ -87,15 +102,19 @@ namespace System_Market.Views
             _categoriaService = new CategoriaService(_conn);
             _usuarioService = new UsuarioService(_conn);
 
+            // Inicializa la cola de mensajes para el snackbar
             MainSnackbar.MessageQueue ??= new SnackbarMessageQueue(TimeSpan.FromSeconds(4));
 
+            // Asigna fuentes de datos a los controles de acciones rápidas
             icQuickActions.ItemsSource = _accionesRapidas;
             cbAccion.ItemsSource = _catalogoAcciones;
 
+            // Carga presets de fechas, categorías y usuarios
             CargarPresetsRangoFecha();
             CargarCategorias();
-            CargarUsuariosPlaceholder(); // ahora carga usuarios en el combo
+            CargarUsuariosPlaceholder();
 
+            // Si no hay acciones rápidas guardadas, agrega las básicas por defecto
             if (!CargarAccionesGuardadas())
             {
                 AgregarAccionSiNoExiste("NuevaVenta");
@@ -104,40 +123,52 @@ namespace System_Market.Views
                 GuardarAcciones();
             }
 
+            // Guarda las acciones rápidas al cerrar la ventana
             Closed += (_, __) => GuardarAcciones();
         }
 
+        // Evento al cargar la ventana: muestra el usuario, aplica permisos y carga datos
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            // Preferir el usuario de la sesión si está disponible, si no usar el valor pasado al constructor
+            // Muestra el nombre del usuario de la sesión o el pasado al constructor
             var nombreSesion = System_Market.Models.SesionActual.Usuario?.Nombre;
             txtUsuarioActual.Text = !string.IsNullOrWhiteSpace(nombreSesion) ? nombreSesion : _usuarioActualNombre;
 
-            // Aplicar permisos según rol (filtra catálogo/acciones y bloquea controles no permitidos)
+            // Aplica restricciones de permisos según el rol
             AplicarPermisos();
 
+            // Inicia el servicio de escáner de código de barras
             BarcodeScannerService.Start();
+            // Aplica el preset de fecha seleccionado
             AplicarPresetSeleccionado(false);
+            // Carga todos los datos del dashboard
             await CargarTodoAsync();
         }
 
         #region Filtros
+        // Refresca el dashboard al hacer clic en el botón de refrescar
         private async void BtnRefrescarDashboard_Click(object sender, RoutedEventArgs e) => await CargarTodoAsync();
+        // Aplica los filtros seleccionados
         private async void BtnAplicarFiltros_Click(object sender, RoutedEventArgs e) => await CargarTodoAsync();
+        // Si el filtro de fecha es personalizado, recarga los datos al cambiar
         private async void FiltroFecha_Changed(object sender, EventArgs e)
         {
             if (cbRangoFecha.SelectedValue as string == "PERS")
                 await CargarTodoAsync();
         }
+        // Cambia el preset de rango de fecha y recarga si no es personalizado
         private async void FiltroRangoFecha_Changed(object sender, SelectionChangedEventArgs e)
         {
             AplicarPresetSeleccionado(true);
             if (cbRangoFecha.SelectedValue as string != "PERS")
                 await CargarTodoAsync();
         }
+        // Recarga datos al cambiar la categoría
         private async void FiltroCategoria_Changed(object sender, SelectionChangedEventArgs e) => await CargarTodoAsync();
+        // Recarga datos al cambiar el usuario
         private async void FiltroUsuario_Changed(object sender, SelectionChangedEventArgs e) => await CargarTodoAsync();
 
+        // Carga los presets de rango de fecha para el filtro
         private void CargarPresetsRangoFecha()
         {
             RangoFechaPresets.Clear();
@@ -169,18 +200,18 @@ namespace System_Market.Views
                 return (d, h);
             }));
 
-            // Asegurar que el combo tiene seleccionada la primera opción (ULT7)
+            // Selecciona por defecto el preset de los últimos 7 días
             try
             {
                 cbRangoFecha.SelectedIndex = 0;
             }
             catch
             {
-                // no crítico si el combo aún no está inicializado
                 cbRangoFecha.SelectedValue = "ULT7";
             }
         }
 
+        // Aplica el preset de rango de fecha seleccionado y habilita/deshabilita los DatePickers
         private void AplicarPresetSeleccionado(bool actualizarPickers)
         {
             if (cbRangoFecha.SelectedItem is not RangoFechaPreset preset) return;
@@ -198,19 +229,21 @@ namespace System_Market.Views
         }
         #endregion
 
+        // Carga todos los datos y visualizaciones del dashboard según los filtros actuales
         private async Task CargarTodoAsync()
         {
             try
             {
                 MostrarOverlay(true);
                 var (desde, hasta) = ObtenerRangoFechas();
+                // Valida el umbral de stock bajo
                 if (!int.TryParse(txtUmbralStock.Text.Trim(), out _umbralStock) || _umbralStock < 0)
                     _umbralStock = 5;
 
                 int? categoriaId = ObtenerCategoriaSeleccionada();
                 int? usuarioId = ObtenerUsuarioSeleccionada();
 
-                // Cargar productos en memoria (usado para stock y nombres)
+                // Carga todos los productos (para stock y nombres)
                 var productos = await Task.Run(_productoService.ObtenerTodos);
 
                 decimal totalVentasRango = 0m;
@@ -222,9 +255,10 @@ namespace System_Market.Views
                 {
                     cn.Open();
 
-                    // Construir ventasRango: si hay filtro de categoría, sumar SOLO los detalles de esa categoría por venta.
+                    // Si hay filtro de categoría, solo suma los detalles de esa categoría por venta
                     if (categoriaId is > 0)
                     {
+                        // Consulta SQL para ventas por categoría
                         var sqlVentasPorCat = @"
                             SELECT v.Id, v.UsuarioId, v.Fecha,
                                    IFNULL(SUM(d.Cantidad * COALESCE(d.PrecioUnitario, p.PrecioVenta)), 0) AS TotalCat,
@@ -262,7 +296,7 @@ namespace System_Market.Views
                             ventasRango.Add(v);
                         }
 
-                        // totalVentasRango: suma de los importes de detalles de la categoría
+                        // Suma total de ventas de la categoría
                         var sqlTotalVentasCat = @"
                             SELECT IFNULL(SUM(d.Cantidad * COALESCE(d.PrecioUnitario, p.PrecioVenta)), 0)
                             FROM DetalleVentas d
@@ -282,7 +316,7 @@ namespace System_Market.Views
                     }
                     else
                     {
-                        // Sin filtro de categoría: traer ventas completas (con UsuarioNombre)
+                        // Sin filtro de categoría: trae ventas completas
                         var sqlVentas = @"
                             SELECT v.Id, v.UsuarioId, v.Fecha, v.Total, IFNULL(u.Nombre,'') AS UsuarioNombre, v.Estado
                             FROM Ventas v
@@ -314,7 +348,7 @@ namespace System_Market.Views
                             }
                         }
 
-                        // totalVentasRango: suma normal de v.Total
+                        // Suma total de ventas normales
                         var sqlTotalVentas = @"
                             SELECT IFNULL(SUM(v.Total), 0)
                             FROM Ventas v
@@ -329,7 +363,7 @@ namespace System_Market.Views
                         totalVentasRango = val == null || val == DBNull.Value ? 0m : Convert.ToDecimal(val);
                     }
 
-                    // totalComprasRango (se mantiene por compra completa, con filtro por categoría si existe)
+                    // Suma total de compras en el rango (con filtro de categoría si aplica)
                     var sqlTotalCompras = @"
                         SELECT IFNULL(SUM(c.Total), 0)
                         FROM Compras c
@@ -353,7 +387,7 @@ namespace System_Market.Views
                         totalComprasRango = valCompr == null || valCompr == DBNull.Value ? 0m : Convert.ToDecimal(valCompr);
                     }
 
-                    // COGS: costo de los ítems realmente vendidos (si hay filtro de categoría se aplica)
+                    // COGS: costo de los productos vendidos (por categoría si aplica)
                     var sqlCogs = @"
                         SELECT IFNULL(SUM(d.Cantidad * p.PrecioCompra), 0)
                         FROM DetalleVentas d
@@ -373,10 +407,10 @@ namespace System_Market.Views
                     costoVentas = valCogs == null || valCogs == DBNull.Value ? 0m : Convert.ToDecimal(valCogs);
                 } // using cn
 
-                // Ganancia: ventas (solo ítems de la categoría cuando aplica) - COGS
+                // Calcula la ganancia neta
                 decimal ganancia = totalVentasRango - costoVentas;
 
-                // UI: asignaciones
+                // Asigna los valores a los controles de la UI
                 txtVentasRango.Text = CurrencyService.FormatSoles(totalVentasRango, "N2");
                 txtGananciaNeta.Text = CurrencyService.FormatSoles(ganancia, "N2");
                 txtGananciaInfo.Text = "Compras: " + CurrencyService.FormatSoles(totalComprasRango, "N2");
@@ -385,13 +419,14 @@ namespace System_Market.Views
                 txtIngresosMonto.Text = CurrencyService.FormatSoles(totalVentasRango, "N2");
                 txtGastosMonto.Text = CurrencyService.FormatSoles(totalComprasRango, "N2");
 
+                // Calcula el objetivo de órdenes para la barra de progreso
                 int diasRango = Math.Max(1, (hasta.Date - desde.Date).Days + 1);
                 double objetivoOrdenes = diasRango * 5;
                 pbOrdenes.Maximum = objetivoOrdenes;
                 pbOrdenes.Value = ventasRango.Count;
                 pbOrdenes.ToolTip = string.Format(CultureInfo.CurrentCulture, "Órdenes: {0:N0} / {1:N0}", ventasRango.Count, objetivoOrdenes);
 
-                // Stock bajo: aplicar filtro por categoría a la lista de productos cargada arriba
+                // Filtra productos con stock bajo y actualiza la UI
                 var productosFiltrados = categoriaId is > 0 ? productos.Where(p => p.CategoriaId == categoriaId.Value).ToList() : productos;
                 var stockBajo = productosFiltrados.Where(p => p.Stock <= _umbralStock).OrderBy(p => p.Stock).ToList();
                 txtStockBajo.Text = stockBajo.Count.ToString();
@@ -401,7 +436,7 @@ namespace System_Market.Views
                     : (stockBajo.Count * 100m / productosFiltrados.Count).ToString("N1") + "%";
                 AplicarColorStock();
 
-                // Visualizaciones consistentes: pasar ventasRango y recalcular agregados ya basados en detalles cuando corresponde
+                // Visualizaciones y listas
                 CalcularMetaYProyeccion(ventasRango);
                 var top = ObtenerTopVendidos(desde, hasta, 10, categoriaId, usuarioId);
                 MaxCantidadTop = top.Any() ? top.Max(t => t.Cantidad) : 1;
@@ -414,6 +449,7 @@ namespace System_Market.Views
                 CalcularDeltaVentas(ventasRango, desde, hasta, totalVentasRango);
                 ConstruirHeatmapHoras(ventasRango);
 
+                // Notifica si hay productos con stock bajo
                 if (stockBajo.Count > 0)
                     MainSnackbar.MessageQueue?.Enqueue($"{stockBajo.Count} prod. con stock ≤ {_umbralStock}");
             }
@@ -425,15 +461,11 @@ namespace System_Market.Views
             finally { MostrarOverlay(false); }
         }
 
+        // Construye la lista de órdenes recientes para mostrar en el dashboard
         private void ConstruirOrdenesRecientes(List<Venta> ventas, bool respetarRango = true)
         {
             OrdenesRecientes.Clear();
             var fuente = ventas.OrderByDescending(v => v.Fecha);
-            if (!respetarRango)
-            {
-                // si quieres las últimas 25 del total independiente del rango,
-                // obtén las ventas sin filtrar por fecha (llama al servicio) y asigna fuente = ...
-            }
             foreach (var v in fuente.Take(25))
             {
                 string cliente = (v.GetType().GetProperty("ClienteNombre")?.GetValue(v) as string)?.Trim() ?? (v.UsuarioNombre ?? "");
@@ -447,6 +479,7 @@ namespace System_Market.Views
             }
         }
 
+        // Formatea la fecha para mostrarla en la lista de órdenes recientes
         private static string FormatearFechaCorta(DateTime fecha)
         {
             var ci = CultureInfo.GetCultureInfo("es-ES");
@@ -455,6 +488,7 @@ namespace System_Market.Views
         }
 
         #region Visualizaciones
+        // Construye el gráfico de evolución de ventas por día
         private void ConstruirEvolucionVentas(List<Venta> ventasRango, DateTime desde, DateTime hasta)
         {
             var dias = Enumerable.Range(0, (hasta.Date - desde.Date).Days + 1)
@@ -502,6 +536,7 @@ namespace System_Market.Views
             };
         }
 
+        // Ajusta la escala del eje Y para los gráficos
         private static double AjustarEscala(double max)
         {
             if (max <= 0) return 1;
@@ -513,6 +548,7 @@ namespace System_Market.Views
             return escala * potencia;
         }
 
+        // Construye el gráfico de distribución de ventas por categoría
         private void ConstruirDistribucionCategorias(DateTime desde, DateTime hasta, int? categoriaFiltro, int? usuarioFiltro)
         {
             var cantidades = new List<(string Nombre, int Cant)>();
@@ -596,6 +632,7 @@ namespace System_Market.Views
             chartDistribucionVentas.Background = null;
         }
 
+        // Construye el gráfico de barras de ingresos y gastos
         private void ConstruirIngresosGastos(decimal ventas, decimal compras)
         {
             _pIngresos.Y = (double)ventas;
@@ -640,7 +677,6 @@ namespace System_Market.Views
                     new Axis
                     {
                         MinLimit = 0,
-                        // Mostrar decimales (no redondear). Usar CurrencyService para consistencia local.
                         Labeler = v => CurrencyService.FormatSoles((decimal)v, "N2"),
                         LabelsPaint = new SolidColorPaint(new SKColor(130,140,148)),
                         SeparatorsPaint = new SolidColorPaint(new SKColor(40,60,66)){ StrokeThickness = 0.6f },
@@ -658,7 +694,7 @@ namespace System_Market.Views
             txtGastosMonto.Text = "S/ " + compras.ToString("N2");
         }
 
-        // Cargar combo de usuarios (opción "Todas")
+        // Carga el combo de usuarios para el filtro (incluye opción "Todas")
         private void CargarUsuariosPlaceholder()
         {
             try
@@ -681,140 +717,139 @@ namespace System_Market.Views
             }
         }
 
-        private static readonly string[] __DAYS_ORDER = { "Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo" };
+        // Días de la semana para el heatmap de ventas por hora
+        private static readonly string[] __DAYS_ORDER = { "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo" };
 
-private static IEnumerable<LvcColor> BuildGradientPalette()
-{
-    // Azul → Cian → Verde → Amarillo → Naranja → Rojo
-    yield return new LvcColor(0x0D,0x47,0x7A,0xFF);
-    yield return new LvcColor(0x08,0x6F,0xA6,0xFF);
-    yield return new LvcColor(0x18,0x98,0xB9,0xFF);
-    yield return new LvcColor(0x2E,0xB6,0x9F,0xFF);
-    yield return new LvcColor(0xD4,0xC9,0x3D,0xFF);
-    yield return new LvcColor(0xF2,0x94,0x3C,0xFF);
-    yield return new LvcColor(0xE5,0x57,0x3A,0xFF);
-    yield return new LvcColor(0xC8,0x1E,0x1E,0xFF);
-}
-
-// Reemplaza SOLO el método ConstruirHeatmapHoras existente por este:
-private void ConstruirHeatmapHoras(List<Venta> ventasRango)
-{
-    if (ventasRango.Count == 0)
-    {
-        chartHorasVentas.Series = Array.Empty<ISeries>();
-        txtHorasHint.Visibility = Visibility.Visible;
-        return;
-    }
-    txtHorasHint.Visibility = Visibility.Collapsed;
-
-    static int MapDay(DayOfWeek d) => d switch
-    {
-        DayOfWeek.Monday => 0,
-        DayOfWeek.Tuesday => 1,
-        DayOfWeek.Wednesday => 2,
-        DayOfWeek.Thursday => 3,
-        DayOfWeek.Friday => 4,
-        DayOfWeek.Saturday => 5,
-        DayOfWeek.Sunday => 6,
-        _ => 0
-    };
-
-    var counts = new int[7,24];
-    foreach (var v in ventasRango)
-        counts[MapDay(v.Fecha.DayOfWeek), v.Fecha.Hour]++;
-
-    int max = 0;
-    for (int d = 0; d < 7; d++)
-        for (int h = 0; h < 24; h++)
-            if (counts[d,h] > max) max = counts[d,h];
-
-    var puntos = new List<WeightedPoint>(7*24);
-    for (int d = 0; d < 7; d++)
-        for (int h = 0; h < 24; h++)
-            puntos.Add(new WeightedPoint(h, d, counts[d,h]));
-
-    // Ranking para tooltip (lo guardamos en diccionario)
-    var conVentas = puntos.Where(p => p.Weight > 0)
-                          .OrderByDescending(p => p.Weight)
-                          .ThenBy(p => p.Y).ThenBy(p => p.X)
-                          .ToList();
-    var rank = new Dictionary<(int h,int d), int>();
-    for (int i = 0; i < conVentas.Count; i++)
-        rank[((int)conVentas[i].X,(int)conVentas[i].Y)] = i + 1;
-
-    // Mostramos solo el máximo como etiqueta para reducir ruido
-    int labelThreshold = max;
-
-    var serie = new HeatSeries<WeightedPoint>
-    {
-        Values = puntos,
-        HeatMap = BuildGradientPalette().ToArray(),
-        DataLabelsPaint = new SolidColorPaint(SKColors.White),
-        DataLabelsFormatter = cp =>
+        // Genera la paleta de colores para el heatmap (de azul a rojo)
+        private static IEnumerable<LvcColor> BuildGradientPalette()
         {
-            if (cp.Model is not WeightedPoint w || w.Weight <= 0) return string.Empty;
-            if (w.Weight >= labelThreshold)
-                return Convert.ToString(w.Weight, CultureInfo.InvariantCulture);
-            return string.Empty;
+            yield return new LvcColor(0x0D, 0x47, 0x7A, 0xFF);
+            yield return new LvcColor(0x08, 0x6F, 0xA6, 0xFF);
+            yield return new LvcColor(0x18, 0x98, 0xB9, 0xFF);
+            yield return new LvcColor(0x2E, 0xB6, 0x9F, 0xFF);
+            yield return new LvcColor(0xD4, 0xC9, 0x3D, 0xFF);
+            yield return new LvcColor(0xF2, 0x94, 0x3C, 0xFF);
+            yield return new LvcColor(0xE5, 0x57, 0x3A, 0xFF);
+            yield return new LvcColor(0xC8, 0x1E, 0x1E, 0xFF);
         }
-        // Sin TooltipLabelFormatter (no existe en tu versión)
-    };
 
-    chartHorasVentas.Series = new ISeries[] { serie };
-
-    // Tooltip básico (posición arriba). Si quieres ocultarlo: TooltipPosition.Hidden
-    chartHorasVentas.TooltipPosition = LiveChartsCore.Measure.TooltipPosition.Top;
-
-    string HourLabel(int h) => h switch
-    {
-        0 => "00",
-        6 => "06",
-        12 => "12",
-        18 => "18",
-        23 => "23",
-        _ => h % 2 == 0 ? h.ToString("00") : ""
-    };
-
-    chartHorasVentas.XAxes = new[]
-    {
-        new Axis
+        // Construye el heatmap de ventas por hora y día de la semana
+        private void ConstruirHeatmapHoras(List<Venta> ventasRango)
         {
-            MinLimit = -0.5,
-            MaxLimit = 23.5,
-            Labels = Enumerable.Range(0,24).Select(HourLabel).ToArray(),
-            TextSize = 11,
-            LabelsPaint = new SolidColorPaint(new SKColor(205,210,216)),
-            SeparatorsPaint = null
-        }
-    };
-    chartHorasVentas.YAxes = new[]
-    {
-        new Axis
-        {
-            Labels = __DAYS_ORDER,
-            TextSize = 12,
-            LabelsPaint = new SolidColorPaint(new SKColor(205,210,216)),
-            SeparatorsPaint = null
-        }
-    };
+            if (ventasRango.Count == 0)
+            {
+                chartHorasVentas.Series = Array.Empty<ISeries>();
+                txtHorasHint.Visibility = Visibility.Visible;
+                return;
+            }
+            txtHorasHint.Visibility = Visibility.Collapsed;
 
-    // Guardar metadatos para el template de tooltip
-    _heatmapMeta.Clear();
-    foreach (var p in puntos)
-    {
-        int h = (int)p.X;
-        int d = (int)p.Y;
-        int ventas = (int)p.Weight;
-        if (ventas > 0)
-        {
-            rank.TryGetValue((h, d), out var r);
-            double pct = max == 0 ? 0 : ventas * 100.0 / max;
-            _heatmapMeta[(h, d)] = (ventas, r, pct);
+            static int MapDay(DayOfWeek d) => d switch
+            {
+                DayOfWeek.Monday => 0,
+                DayOfWeek.Tuesday => 1,
+                DayOfWeek.Wednesday => 2,
+                DayOfWeek.Thursday => 3,
+                DayOfWeek.Friday => 4,
+                DayOfWeek.Saturday => 5,
+                DayOfWeek.Sunday => 6,
+                _ => 0
+            };
+
+            var counts = new int[7, 24];
+            foreach (var v in ventasRango)
+                counts[MapDay(v.Fecha.DayOfWeek), v.Fecha.Hour]++;
+
+            int max = 0;
+            for (int d = 0; d < 7; d++)
+                for (int h = 0; h < 24; h++)
+                    if (counts[d, h] > max) max = counts[d, h];
+
+            var puntos = new List<WeightedPoint>(7 * 24);
+            for (int d = 0; d < 7; d++)
+                for (int h = 0; h < 24; h++)
+                    puntos.Add(new WeightedPoint(h, d, counts[d, h]));
+
+            // Ranking para tooltip
+            var conVentas = puntos.Where(p => p.Weight > 0)
+                                  .OrderByDescending(p => p.Weight)
+                                  .ThenBy(p => p.Y).ThenBy(p => p.X)
+                                  .ToList();
+            var rank = new Dictionary<(int h, int d), int>();
+            for (int i = 0; i < conVentas.Count; i++)
+                rank[((int)conVentas[i].X, (int)conVentas[i].Y)] = i + 1;
+
+            // Solo muestra etiqueta en el máximo
+            int labelThreshold = max;
+
+            var serie = new HeatSeries<WeightedPoint>
+            {
+                Values = puntos,
+                HeatMap = BuildGradientPalette().ToArray(),
+                DataLabelsPaint = new SolidColorPaint(SKColors.White),
+                DataLabelsFormatter = cp =>
+                {
+                    if (cp.Model is not WeightedPoint w || w.Weight <= 0) return string.Empty;
+                    if (w.Weight >= labelThreshold)
+                        return Convert.ToString(w.Weight, CultureInfo.InvariantCulture);
+                    return string.Empty;
+                }
+            };
+
+            chartHorasVentas.Series = new ISeries[] { serie };
+            chartHorasVentas.TooltipPosition = LiveChartsCore.Measure.TooltipPosition.Top;
+
+            string HourLabel(int h) => h switch
+            {
+                0 => "00",
+                6 => "06",
+                12 => "12",
+                18 => "18",
+                23 => "23",
+                _ => h % 2 == 0 ? h.ToString("00") : ""
+            };
+
+            chartHorasVentas.XAxes = new[]
+            {
+                new Axis
+                {
+                    MinLimit = -0.5,
+                    MaxLimit = 23.5,
+                    Labels = Enumerable.Range(0,24).Select(HourLabel).ToArray(),
+                    TextSize = 11,
+                    LabelsPaint = new SolidColorPaint(new SKColor(205,210,216)),
+                    SeparatorsPaint = null
+                }
+            };
+            chartHorasVentas.YAxes = new[]
+            {
+                new Axis
+                {
+                    Labels = __DAYS_ORDER,
+                    TextSize = 12,
+                    LabelsPaint = new SolidColorPaint(new SKColor(205,210,216)),
+                    SeparatorsPaint = null
+                }
+            };
+
+            // Guarda metadatos para tooltips personalizados
+            _heatmapMeta.Clear();
+            foreach (var p in puntos)
+            {
+                int h = (int)p.X;
+                int d = (int)p.Y;
+                int ventas = (int)p.Weight;
+                if (ventas > 0)
+                {
+                    rank.TryGetValue((h, d), out var r);
+                    double pct = max == 0 ? 0 : ventas * 100.0 / max;
+                    _heatmapMeta[(h, d)] = (ventas, r, pct);
+                }
+            }
         }
-    }
-}
         #endregion
 
+        // Calcula el delta de ventas respecto al periodo anterior y actualiza la UI
         private void CalcularDeltaVentas(List<Venta> ventasTodas, DateTime desde, DateTime hasta, decimal actual)
         {
             int rangoDias = (hasta.Date - desde.Date).Days + 1;
@@ -836,8 +871,10 @@ private void ConstruirHeatmapHoras(List<Venta> ventasRango)
             bdDeltaVentas.Visibility = Visibility.Visible;
         }
 
+        // Calcula meta y proyección de ventas (reservado para futuras mejoras)
         private void CalcularMetaYProyeccion(List<Venta> ventasTodas) { /* reservado */ }
 
+        // Obtiene el top de productos más vendidos en el rango y filtros actuales
         private List<TopVentaDTO> ObtenerTopVendidos(DateTime desde, DateTime hasta, int limite, int? categoriaId, int? usuarioId)
         {
             var lista = new List<TopVentaDTO>();
@@ -877,36 +914,35 @@ private void ConstruirHeatmapHoras(List<Venta> ventasRango)
         }
 
         #region Utilidades
+        // Obtiene el rango de fechas seleccionado en los filtros
         private (DateTime desde, DateTime hasta) ObtenerRangoFechas()
         {
-            // Preferir SelectedItem (binding correcto)
             if (cbRangoFecha.SelectedItem is RangoFechaPreset preset)
             {
                 if (preset.Clave != "PERS")
                     return preset.Rango();
             }
-
-            // Fallback: si SelectedItem no está inicializado, intentar SelectedValue (clave)
             if (cbRangoFecha.SelectedValue is string clave)
             {
                 var p = RangoFechaPresets.FirstOrDefault(r => string.Equals(r.Clave, clave, StringComparison.OrdinalIgnoreCase));
                 if (p != null && p.Clave != "PERS")
                     return p.Rango();
             }
-
-            // Por defecto usar los pickers
             var dSel = (dpDesde.SelectedDate ?? DateTime.Today).Date;
             var hSel = (dpHasta.SelectedDate ?? DateTime.Today).Date.AddDays(1).AddTicks(-1);
             if (hSel < dSel) hSel = dSel.AddDays(1).AddTicks(-1);
             return (dSel, hSel);
         }
 
+        // Devuelve el id de la categoría seleccionada o null si es "Todas"
         private int? ObtenerCategoriaSeleccionada() =>
             cbCategoria.SelectedValue is int id && id > 0 ? id : null;
 
+        // Devuelve el id del usuario seleccionado o null si es "Todas"
         private int? ObtenerUsuarioSeleccionada() =>
             cbUsuario.SelectedValue is int id && id > 0 ? id : null;
 
+        // Devuelve los ids de ventas que contienen productos de una categoría
         private HashSet<int> ObtenerVentaIdsPorCategoria(int categoriaId)
         {
             var ids = new HashSet<int>();
@@ -925,6 +961,7 @@ private void ConstruirHeatmapHoras(List<Venta> ventasRango)
             return ids;
         }
 
+        // Devuelve los ids de compras que contienen productos de una categoría
         private HashSet<int> ObtenerCompraIdsPorCategoria(int categoriaId)
         {
             var ids = new HashSet<int>();
@@ -943,6 +980,7 @@ private void ConstruirHeatmapHoras(List<Venta> ventasRango)
             return ids;
         }
 
+        // Cambia el color del porcentaje de stock bajo según el valor
         private void AplicarColorStock()
         {
             if (decimal.TryParse(txtPorcStockBajo.Text.Replace("%", ""), out var val))
@@ -954,8 +992,10 @@ private void ConstruirHeatmapHoras(List<Venta> ventasRango)
             }
         }
 
+        // Muestra u oculta el overlay de carga
         private void MostrarOverlay(bool v) => LoadingOverlay.Visibility = v ? Visibility.Visible : Visibility.Collapsed;
 
+        // Devuelve el rango de fechas actual (para exportar)
         private (DateTime desde, DateTime hasta)? ObtenerRango()
         {
             var (d, h) = ObtenerRangoFechas();
@@ -964,6 +1004,7 @@ private void ConstruirHeatmapHoras(List<Venta> ventasRango)
         #endregion
 
         #region Exportar
+        // Crea el diálogo para guardar archivos CSV
         private SaveFileDialog CrearDialogo(string fileName, string titulo) => new()
         {
             Title = titulo,
@@ -974,6 +1015,7 @@ private void ConstruirHeatmapHoras(List<Venta> ventasRango)
             InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
         };
 
+        // Escapa valores para CSV
         private static string Csv(string value)
         {
             if (string.IsNullOrEmpty(value)) return "";
@@ -981,18 +1023,18 @@ private void ConstruirHeatmapHoras(List<Venta> ventasRango)
             return need ? "\"" + value.Replace("\"", "\"\"") + "\"" : value;
         }
 
+        // Exporta el resumen de ventas a CSV (solo si es administrador)
         private void BtnExportar_Click(object sender, RoutedEventArgs e) => ExportarVentasResumenCsv();
         private void BtnExportar_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Enter) { ExportarVentasResumenCsv(); e.Handled = true; }
         }
 
-        // Reemplaza ExportarVentasResumenCsv por esta versión (valida permisos antes de exportar)
         private void ExportarVentasResumenCsv()
         {
             try
             {
-                // Validar rol
+                // Solo permite exportar si el usuario es administrador
                 if (!EsAdministrador())
                 {
                     MessageBox.Show("No tiene permisos para exportar.", "Acceso denegado", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -1056,6 +1098,7 @@ private void ConstruirHeatmapHoras(List<Venta> ventasRango)
         #endregion
 
         #region Acciones rápidas
+        // Agrega una acción rápida seleccionada desde el combo
         private void BtnAgregarAccion_Click(object sender, RoutedEventArgs e)
         {
             if (cbAccion.SelectedValue is string clave && AgregarAccionSiNoExiste(clave))
@@ -1065,6 +1108,7 @@ private void ConstruirHeatmapHoras(List<Venta> ventasRango)
             }
         }
 
+        // Agrega una acción rápida si no existe ya en la lista
         private bool AgregarAccionSiNoExiste(string clave)
         {
             if (_accionesRapidas.Any(a => a.Clave == clave)) return false;
@@ -1074,6 +1118,7 @@ private void ConstruirHeatmapHoras(List<Venta> ventasRango)
             return true;
         }
 
+        // Construye una acción rápida a partir de su definición
         private QuickAction BuildQuickAction(AccionDef def) =>
             new()
             {
@@ -1114,12 +1159,14 @@ private void ConstruirHeatmapHoras(List<Venta> ventasRango)
                 }
             };
 
+        // Ejecuta la acción rápida al hacer clic en el botón correspondiente
         private void QuickAction_Click(object sender, RoutedEventArgs e)
         {
             if ((sender as Button)?.DataContext is QuickAction qa)
                 qa.Ejecutar?.Invoke();
         }
 
+        // Quita una acción rápida de la lista
         private void QuickAction_Quitar_Click(object sender, RoutedEventArgs e)
         {
             if ((sender as FrameworkElement)?.DataContext is QuickAction qa)
@@ -1129,6 +1176,7 @@ private void ConstruirHeatmapHoras(List<Venta> ventasRango)
             }
         }
 
+        // Carga las acciones rápidas guardadas en disco
         private bool CargarAccionesGuardadas()
         {
             try
@@ -1142,6 +1190,7 @@ private void ConstruirHeatmapHoras(List<Venta> ventasRango)
             catch { return false; }
         }
 
+        // Guarda las acciones rápidas actuales en disco
         private void GuardarAcciones()
         {
             try
@@ -1155,6 +1204,7 @@ private void ConstruirHeatmapHoras(List<Venta> ventasRango)
         }
         #endregion
 
+        // Muestra mensaje si no hay productos con stock bajo al hacer clic en la tarjeta
         private void CardStockBajo_Click(object sender, MouseButtonEventArgs e)
         {
             if (dgStockBajo.Items.Count == 0)
@@ -1162,7 +1212,9 @@ private void ConstruirHeatmapHoras(List<Venta> ventasRango)
         }
 
         #region Tipos internos
+        // Definición de una acción rápida
         private record AccionDef(string Clave, string Titulo, string Icono);
+        // Clase para acciones rápidas configurables
         private class QuickAction
         {
             public string Clave { get; set; } = "";
@@ -1170,12 +1222,14 @@ private void ConstruirHeatmapHoras(List<Venta> ventasRango)
             public string Icono { get; set; } = "\uE10F";
             public Action? Ejecutar { get; set; }
         }
+        // DTO para el top de productos vendidos
         private class TopVentaDTO
         {
             public int Pos { get; set; }
             public string Nombre { get; set; } = "";
             public int Cantidad { get; set; }
         }
+        // Preset de rango de fecha para los filtros
         public class RangoFechaPreset
         {
             public string Clave { get; }
@@ -1184,6 +1238,7 @@ private void ConstruirHeatmapHoras(List<Venta> ventasRango)
             public RangoFechaPreset(string clave, string nombre, Func<(DateTime, DateTime)> rango)
             { Clave = clave; Nombre = nombre; Rango = rango; }
         }
+        // DTO para mostrar órdenes recientes
         public class OrdenRecienteDTO
         {
             public string Fecha { get; set; } = "";
@@ -1194,11 +1249,13 @@ private void ConstruirHeatmapHoras(List<Venta> ventasRango)
         }
         #endregion
 
+        // Solo permite dígitos en el textbox de umbral de stock
         private void TxtUmbralStock_PreviewTextInput(object sender, TextCompositionEventArgs e)
         {
             e.Handled = !e.Text.All(char.IsDigit);
         }
 
+        // Carga el combo de categorías para el filtro (incluye opción "Todas")
         private void CargarCategorias()
         {
             try
@@ -1225,55 +1282,54 @@ private void ConstruirHeatmapHoras(List<Venta> ventasRango)
             }
         }
 
-        // Añadir helper para comprobar rol (colócalo junto a otros utilitarios en la clase)
+        // Devuelve true si el usuario actual es administrador
         private static bool EsAdministrador()
         {
             var rol = System_Market.Models.SesionActual.Usuario?.Rol;
             return !string.IsNullOrWhiteSpace(rol) && string.Equals(rol, "Administrador", StringComparison.OrdinalIgnoreCase);
         }
 
-// Añade este método nuevo que aplica las restricciones (colócalo en la región utilidades o cerca del constructor)
-private void AplicarPermisos()
-{
-    bool admin = EsAdministrador();
-
-    // 1) Controls: si no es admin, bloquear selección de usuario (cajero solo ve sus propias ventas)
-    if (!admin)
-    {
-        cbUsuario.IsEnabled = false;
-        var usuarioSesion = System_Market.Models.SesionActual.Usuario;
-        if (usuarioSesion != null)
-            cbUsuario.SelectedValue = usuarioSesion.Id;
-    }
-    else
-    {
-        cbUsuario.IsEnabled = true;
-    }
-
-    // 2) Filtrar catálogo de acciones rápidas para cajero
-    if (!admin)
-    {
-        var permitidas = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        // Aplica restricciones de permisos según el rol del usuario
+        private void AplicarPermisos()
         {
-            "NuevaVenta",
-            "AgregarProducto",
-            "Ventas"
-        };
+            bool admin = EsAdministrador();
 
-        // Filtrar catálogo (remueve entradas no permitidas)
-        _catalogoAcciones.RemoveAll(a => !permitidas.Contains(a.Clave));
+            // Si no es admin, bloquea el filtro de usuario y lo fija al usuario de la sesión
+            if (!admin)
+            {
+                cbUsuario.IsEnabled = false;
+                var usuarioSesion = System_Market.Models.SesionActual.Usuario;
+                if (usuarioSesion != null)
+                    cbUsuario.SelectedValue = usuarioSesion.Id;
+            }
+            else
+            {
+                cbUsuario.IsEnabled = true;
+            }
 
-        // Quitar acciones rápidas guardadas que no estén permitidas
-        for (int i = _accionesRapidas.Count - 1; i >= 0; i--)
-        {
-            if (!_catalogoAcciones.Any(c => c.Clave == _accionesRapidas[i].Clave))
-                _accionesRapidas.RemoveAt(i);
+            // Si no es admin, filtra el catálogo de acciones rápidas permitidas
+            if (!admin)
+            {
+                var permitidas = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    "NuevaVenta",
+                    "AgregarProducto",
+                    "Ventas"
+                };
+
+                _catalogoAcciones.RemoveAll(a => !permitidas.Contains(a.Clave));
+
+                // Quita acciones rápidas guardadas que no estén permitidas
+                for (int i = _accionesRapidas.Count - 1; i >= 0; i--)
+                {
+                    if (!_catalogoAcciones.Any(c => c.Clave == _accionesRapidas[i].Clave))
+                        _accionesRapidas.RemoveAt(i);
+                }
+
+                // Refresca el combo de acciones si está inicializado
+                try { cbAccion.ItemsSource = null; cbAccion.ItemsSource = _catalogoAcciones; }
+                catch { }
+            }
         }
-
-        // Refrescar ComboBox si está inicializado
-        try { cbAccion.ItemsSource = null; cbAccion.ItemsSource = _catalogoAcciones; }
-        catch { /* no crítico */ }
-    }
-}
     }
 }
